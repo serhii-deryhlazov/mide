@@ -61,7 +61,7 @@ Press `` ` `` again to dismiss the prompt without running a command.
 ## Startup behavior
 
 - Opens `README.md` from the working directory by default (if present).
-- File tree starts hidden; toggle it with `Ctrl+B` or the `tree` command.
+- File tree starts hidden; toggle it with the `tree` command.
 
 ## Project structure
 
