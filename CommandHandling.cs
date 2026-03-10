@@ -15,6 +15,29 @@ partial class Program
         {
             e.Handled = true;
             ShowCommandPrompt();
+            return;
+        }
+
+        // When tree is hidden, route all keys to the editor.
+        if (!_treeVisible && _editor != null)
+        {
+            // Typing a printable character always enters edit mode.
+            bool isPrintable = !char.IsControl(e.KeyInfo.KeyChar) && e.KeyInfo.KeyChar != '\0';
+            if (isPrintable && !_editor.IsEditing)
+            {
+                _editor.IsEditing = true;
+                _editor.HighlightCurrentLine = true;
+            }
+
+            // Only give focus and process keys if in editing mode.
+            if (_editor.IsEditing)
+            {
+                if (!_editor.HasFocus)
+                    _editor.SetFocus(true, FocusReason.Programmatic);
+                _editor.ProcessKey(e.KeyInfo);
+                e.Handled = true;
+            }
+            return;
         }
     }
 
@@ -130,7 +153,7 @@ partial class Program
 
         if (lower is "save" or "s")
         {
-            _ = SaveAsync(false);
+            await SaveAsync(false);
             return;
         }
 

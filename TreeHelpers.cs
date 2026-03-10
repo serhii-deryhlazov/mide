@@ -71,7 +71,25 @@ partial class Program
     static void ToggleTree()
     {
         _treeVisible = !_treeVisible;
+        if (_treeVisible)
+            OpenTree();
+        else
+            ApplyTreeVisibility();
+    }
+
+    static void OpenTree()
+    {
+        _treeVisible = true;
         ApplyTreeVisibility();
+        if (_currentFile != null)
+            SyncTreeSelection(_currentFile);
+        if (_editor != null)
+        {
+            _editor.IsEditing = false;
+            _editor.HighlightCurrentLine = false;
+            _editor.SetFocus(false, FocusReason.Programmatic);
+        }
+        _fileTree?.SetFocus(true, FocusReason.Programmatic);
     }
 
     static void ApplyTreeVisibility()
@@ -83,7 +101,10 @@ partial class Program
             _fileTree.Width     = _treeVisible ? 30 : 0;
 
             if (!_treeVisible)
-                FocusEditor(editing: _editor?.IsEditing ?? false);
+            {
+                ApplyEditingMode(true);
+                FocusEditor(editing: true);
+            }
 
             UpdateLayoutWidths();
         }

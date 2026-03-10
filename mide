@@ -5,7 +5,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 cd "$SCRIPT_DIR"
 
-# Build if no binary exists yet, or if sources are newer than the bisss
+# Build if no binary exists yet, or if sources are newer than the ba
 BINARY="$SCRIPT_DIR/bin/Release/net9.0/mide.dll"
 NEEDS_BUILD=false
 

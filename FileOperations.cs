@@ -79,10 +79,18 @@ partial class Program
             {
                 File.WriteAllText(path, _editor.Content ?? string.Empty);
                 _currentFile = path;
-                ApplyEditingMode(false);
                 UpdateTitle();
                 Notify("Saved", Path.GetFileName(path), NotificationSeverity.Success);
                 if (_fileTree != null) PopulateTree(_fileTree, _rootDir);
+                // Re-open in read mode — identical to the 'open' command result.
+                await Task.Yield();
+                OpenFile(path, fromTree: false, editMode: false, focusEditor: false);
+                // If tree was visible before entering edit mode from tree, restore it.
+                if (_treeWasVisibleBeforeEdit)
+                {
+                    _treeWasVisibleBeforeEdit = false;
+                    OpenTree();
+                }
             }
             catch (Exception ex)
             {

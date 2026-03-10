@@ -25,6 +25,7 @@ partial class Program
     static string _rootDir = Directory.GetCurrentDirectory();
     static bool _treeVisible = false;
     static bool _suppressTreeEvent = false;
+    static bool _treeWasVisibleBeforeEdit = false; // remember tree state when entering edit from tree
 
     // ── Welcome screen is defined in WelcomeText.cs ──────────────────────
 
@@ -81,7 +82,7 @@ partial class Program
         // ─ File tree ─
         _fileTree = new TreeControl { Name = "fileTree" };
         PopulateTree(_fileTree, _rootDir);
-        ApplyTreeVisibility();
+    ApplyTreeVisibility();
 
         _fileTree.NodeActivated += (_, e) =>
         {
@@ -93,11 +94,13 @@ partial class Program
                 // Hide tree so arrows stay in editor
                 if (_treeVisible)
                 {
+                    _treeWasVisibleBeforeEdit = true;
                     _treeVisible = false;
                     ApplyTreeVisibility();
                 }
 
                 _fileTree?.SetFocus(false, FocusReason.Programmatic);
+                ApplyEditingMode(true);
                 FocusEditor(editing: true);
                 _editor?.EnsureCursorVisible();
                 _suppressTreeEvent = false;
