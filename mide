@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+cd "$SCRIPT_DIR"
+
+# Build if no binary exists yet, or if sources are newer than the bisss
+BINARY="$SCRIPT_DIR/bin/Release/net9.0/mide.dll"
+NEEDS_BUILD=false
+
+if [ ! -f "$BINARY" ]; then
+  NEEDS_BUILD=true
+else
+  # Rebuild if any source file is newer than the binary
+  while IFS= read -r -d '' src; do
+    if [ "$src" -nt "$BINARY" ]; then
+      NEEDS_BUILD=true
+      break
+    fi
+  done < <(find "$SCRIPT_DIR" -maxdepth 1 \( -name "*.cs" -o -name "*.csproj" \) -print0)
+fi
+
+if [ "$NEEDS_BUILD" = true ]; then
+  echo "Building mide..."
+  dotnet build -c Release --nologo -v quiet
+  echo "Build complete."
+fi
+
+# Pass any arguments through (e.g. a folder to open)
+exec dotnet run --project "$SCRIPT_DIR/mide.csproj" -c Release --no-build -- "$@"
