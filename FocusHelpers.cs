@@ -16,8 +16,8 @@ partial class Program
         if (_editor == null) return;
 
         _editor.IsEditing             = editing;
-        _editor.HighlightCurrentLine  = editing;        // only highlight current line in edit mode
-        _editor.ShowEditingHints      = editing;        // hints only in edit mode
+        _editor.HighlightCurrentLine  = editing;
+        _editor.ShowEditingHints      = editing;
 
         if (!editing)
         {

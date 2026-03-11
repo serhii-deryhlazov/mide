@@ -1,6 +1,5 @@
 using System.Text.RegularExpressions;
 using Spectre.Console;
-using SharpConsoleUI;
 using SharpConsoleUI.Controls;
 
 namespace mide;

@@ -1,21 +1,15 @@
-#nullable disable warnings
 using Spectre.Console;
 using SharpConsoleUI;
 using SharpConsoleUI.Builders;
 using SharpConsoleUI.Configuration;
 using SharpConsoleUI.Controls;
 using SharpConsoleUI.Core;
-using SharpConsoleUI.Dialogs;
 using SharpConsoleUI.Drivers;
-using SharpConsoleUI.Events;
-using SharpConsoleUI.Layout;
-#nullable restore warnings
 
 namespace mide;
 
 partial class Program
 {
-    // ── IDE state ──────────────────────────────────────────────────────────
     static ConsoleWindowSystem? _ws;
     static MultilineEditControl? _editor;
     static TreeControl? _fileTree;
@@ -25,9 +19,7 @@ partial class Program
     static string _rootDir = Directory.GetCurrentDirectory();
     static bool _treeVisible = false;
     static bool _suppressTreeEvent = false;
-    static bool _treeWasVisibleBeforeEdit = false; // remember tree state when entering edit from tree
-
-    // ── Welcome screen is defined in WelcomeText.cs ──────────────────────
+    static bool _treeWasVisibleBeforeEdit = false;
 
     static async Task<int> Main(string[] args)
     {
@@ -59,10 +51,8 @@ partial class Program
         }
     }
 
-    // ── Main IDE window ───────────────────────────────────────────────────
     static void BuildIdeWindow(ConsoleWindowSystem ws)
     {
-        // ─ Editor ─
         _editor = Controls.MultilineEdit(Welcome)
             .WithLineNumbers(true)
             .WithHighlightCurrentLine(true)
@@ -79,10 +69,9 @@ partial class Program
         _editor.OverwriteModeChanged  += (_, _) => UpdateStatusBar();
         _editor.EditingModeChanged    += (_, _) => UpdateStatusBar();
 
-        // ─ File tree ─
         _fileTree = new TreeControl { Name = "fileTree" };
         PopulateTree(_fileTree, _rootDir);
-    ApplyTreeVisibility();
+        ApplyTreeVisibility();
 
         _fileTree.NodeActivated += (_, e) =>
         {
@@ -91,7 +80,6 @@ partial class Program
                 _suppressTreeEvent = true;
                 OpenFile(path, fromTree: true, editMode: true, focusEditor: true);
 
-                // Hide tree so arrows stay in editor
                 if (_treeVisible)
                 {
                     _treeWasVisibleBeforeEdit = true;
@@ -114,9 +102,6 @@ partial class Program
                 OpenFile(path, fromTree: true, focusEditor: false);
         };
 
-        // (Status bar intentionally omitted per user request)
-
-        // ─ Layout: [tree col | editor col] ─
         var layout = Controls.HorizontalGrid()
             .WithVerticalAlignment(SharpConsoleUI.Layout.VerticalAlignment.Fill)
             .Column(col => col.Add(_fileTree))
@@ -136,7 +121,7 @@ partial class Program
             .AddControl(layout)
             .BuildAndShow();
 
-    window.PreviewKeyPressed += OnWindowPreviewKeyPressed;
+        window.PreviewKeyPressed += OnWindowPreviewKeyPressed;
 
         UpdateLayoutWidths();
 
@@ -144,79 +129,6 @@ partial class Program
         UpdateStatusBar();
     }
 
-    // ── Menu ──────────────────────────────────────────────────────────────
-    static MenuControl BuildMenu(ConsoleWindowSystem ws)
-    {
-        var menu = Controls.Menu()
-            .Horizontal()
-            .Sticky()
-            .WithName("mainMenu")
-            .AddItem("File", m => m
-                .AddItem("New",            "Ctrl+N", NewFile)
-                .AddItem("Open...",        "Ctrl+O", () => _ = OpenFileDialogAsync())
-                .AddItem("Open Folder...", null,     () => _ = OpenFolderDialogAsync())
-                .AddItem("Save",           "Ctrl+S", () => _ = SaveAsync(false))
-                .AddItem("Save As...",     null,     () => _ = SaveAsync(true))
-                .AddSeparator()
-                .AddItem("Exit",           "Ctrl+Q", () => ws.Shutdown(0)))
-            .AddItem("Edit", m => m
-                .AddItem("Undo",           "Ctrl+Z", () => { })
-                .AddItem("Redo",           "Ctrl+Y", () => { })
-                .AddSeparator()
-                .AddItem("Find...",        "Ctrl+F", () => _ = ShowFindDialogAsync())
-                .AddItem("Go to Line...",  "Ctrl+G", () => _ = ShowGotoDialogAsync()))
-            .AddItem("View", m => m
-                .AddItem("Toggle File Tree",    "Ctrl+B", ToggleTree)
-                .AddItem("Toggle Line Numbers", null,     () => { if (_editor != null) _editor.ShowLineNumbers = !_editor.ShowLineNumbers; })
-                .AddItem("Toggle Word Wrap",    null,     () =>
-                {
-                    if (_editor != null)
-                        _editor.WrapMode = _editor.WrapMode == WrapMode.NoWrap
-                            ? WrapMode.WrapWords : WrapMode.NoWrap;
-                })
-                .AddSeparator()
-                .AddItem("Theme: Classic",    null, () => ws.ThemeStateService.SwitchTheme("Classic"))
-                .AddItem("Theme: ModernGray", null, () => ws.ThemeStateService.SwitchTheme("ModernGray")))
-            .AddItem("Help", m => m
-                .AddItem("About", "F1", ShowAbout))
-            .Build();
-
-        menu.StickyPosition = StickyPosition.Top;
-        return menu;
-    }
-
-
-    // ── About ─────────────────────────────────────────────────────────────
-    static void ShowAbout()
-    {
-        if (_ws == null) return;
-        var dialog = new WindowBuilder(_ws)
-            .WithTitle("About mide")
-            .WithSize(46, 12)
-            .Centered()
-            .AsModal()
-            .Build();
-
-        dialog.AddControl(new MarkupControl(new List<string>
-        {
-            "[bold yellow]mide[/] – terminal IDE",
-            "",
-            "Built with [bold cyan]SharpConsoleUI[/] v2.4.40",
-            "and [bold cyan].NET 9[/]",
-            "",
-            "Supports: C#, Python, JS/TS, JSON, Markdown",
-            "",
-            "[dim]https://github.com/nickprotop/ConsoleEx[/]"
-        }));
-
-        dialog.AddControl(Controls.Button("Close").WithWidth(10)
-            .OnClick((_, _, _) => _ws.CloseWindow(dialog))
-            .Build());
-
-        _ws.AddWindow(dialog);
-    }
-
-    // ── Helpers ───────────────────────────────────────────────────────────
     static void UpdateTitle()
     {
         if (_ws == null) return;
@@ -251,7 +163,6 @@ partial class Program
 
     static void Notify(string title, string message, NotificationSeverity severity)
     {
-        // Notifications disabled to avoid popup windows per user request.
     }
 
     static int CountLines(string? s) =>

@@ -8,7 +8,6 @@ namespace mide;
 
 partial class Program
 {
-    // ── Find dialog ───────────────────────────────────────────────────────
     static async Task ShowFindDialogAsync()
     {
         if (_ws == null) return;
@@ -55,7 +54,6 @@ partial class Program
         }
     }
 
-    // ── Go-to-line dialog ─────────────────────────────────────────────────
     static async Task ShowGotoDialogAsync()
     {
         if (_ws == null || _editor == null) return;

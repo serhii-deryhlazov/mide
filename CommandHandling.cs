@@ -8,7 +8,6 @@ namespace mide;
 
 partial class Program
 {
-    // ── Command prompt (backtick) ───────────────────────────────────────
     static void OnWindowPreviewKeyPressed(object? sender, SharpConsoleUI.KeyPressedEventArgs e)
     {
         if (IsBacktick(e.KeyInfo))
@@ -18,10 +17,8 @@ partial class Program
             return;
         }
 
-        // When tree is hidden, route all keys to the editor.
         if (!_treeVisible && _editor != null)
         {
-            // Typing a printable character always enters edit mode.
             bool isPrintable = !char.IsControl(e.KeyInfo.KeyChar) && e.KeyInfo.KeyChar != '\0';
             if (isPrintable && !_editor.IsEditing)
             {
@@ -29,7 +26,6 @@ partial class Program
                 _editor.HighlightCurrentLine = true;
             }
 
-            // Only give focus and process keys if in editing mode.
             if (_editor.IsEditing)
             {
                 if (!_editor.HasFocus)
@@ -44,8 +40,8 @@ partial class Program
     static bool IsBacktick(ConsoleKeyInfo key)
     {
         if (key.KeyChar == '`') return true;
-        if (key.Key == ConsoleKey.Oem3) return true; // common backtick/tilde
-        if (key.Key == ConsoleKey.Oem8) return true; // some layouts map backtick here
+        if (key.Key == ConsoleKey.Oem3) return true;
+        if (key.Key == ConsoleKey.Oem8) return true;
         return false;
     }
 

@@ -4,7 +4,6 @@ namespace mide;
 
 partial class Program
 {
-    // ── File tree helpers ─────────────────────────────────────────────────
     static void PopulateTree(TreeControl tree, string dir)
     {
         tree.Clear();
@@ -67,7 +66,6 @@ partial class Program
         _                   => "[grey]  [/]"
     };
 
-    // ── Toggle tree ─────────────────────────────────────────────────────--
     static void ToggleTree()
     {
         _treeVisible = !_treeVisible;

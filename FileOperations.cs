@@ -1,5 +1,3 @@
-using SharpConsoleUI;
-using SharpConsoleUI.Controls;
 using SharpConsoleUI.Core;
 using SharpConsoleUI.Dialogs;
 
@@ -7,7 +5,6 @@ namespace mide;
 
 partial class Program
 {
-    // ── Open / Save ───────────────────────────────────────────────────────
     static void OpenFile(string path, bool fromTree = false, bool editMode = false, bool focusEditor = false)
     {
         if (_editor == null) return;
@@ -82,10 +79,8 @@ partial class Program
                 UpdateTitle();
                 Notify("Saved", Path.GetFileName(path), NotificationSeverity.Success);
                 if (_fileTree != null) PopulateTree(_fileTree, _rootDir);
-                // Re-open in read mode — identical to the 'open' command result.
                 await Task.Yield();
                 OpenFile(path, fromTree: false, editMode: false, focusEditor: false);
-                // If tree was visible before entering edit mode from tree, restore it.
                 if (_treeWasVisibleBeforeEdit)
                 {
                     _treeWasVisibleBeforeEdit = false;
@@ -114,7 +109,6 @@ partial class Program
             }
         }
 
-        // fallback: welcome content
         _editor.Content   = Welcome;
         _currentFile      = null;
         _editor.IsEditing = false;

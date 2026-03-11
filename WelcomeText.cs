@@ -2,7 +2,6 @@ namespace mide;
 
 partial class Program
 {
-    // ── Welcome screen ─────────────────────────────────────────────────────
     const string Welcome =
         "//  ███╗   ███╗██╗██████╗ ███████╗\n" +
         "//  ████╗ ████║██║██╔══██╗██╔════╝\n" +
