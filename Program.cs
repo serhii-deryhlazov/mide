@@ -20,11 +20,15 @@ partial class Program
     static bool _treeVisible = false;
     static bool _suppressTreeEvent = false;
     static bool _treeWasVisibleBeforeEdit = false;
+    static Config _config = new();
 
     static async Task<int> Main(string[] args)
     {
         if (args.Length > 0 && Directory.Exists(args[0]))
             _rootDir = Path.GetFullPath(args[0]);
+
+        _config = Config.Load();
+        _treeVisible = _config.Tree.VisibleOnStart;
 
         try
         {
@@ -33,7 +37,7 @@ partial class Program
                 options: new ConsoleWindowSystemOptions(
                     StatusBarOptions: new StatusBarOptions(ShowTaskBar: false)));
 
-            _ws.StatusBarStateService.TopStatus    = " mide ";
+            _ws.StatusBarStateService.TopStatus    = _config.App.TopStatusDefault;
             _ws.StatusBarStateService.BottomStatus = string.Empty;
 
             Console.CancelKeyPress += (_, e) => { e.Cancel = true; _ws?.Shutdown(0); };
@@ -54,12 +58,12 @@ partial class Program
     static void BuildIdeWindow(ConsoleWindowSystem ws)
     {
         _editor = Controls.MultilineEdit(Welcome)
-            .WithLineNumbers(true)
-            .WithHighlightCurrentLine(true)
-            .WithAutoIndent(true)
+            .WithLineNumbers(_config.Editor.LineNumbers)
+            .WithHighlightCurrentLine(_config.Editor.HighlightCurrentLine)
+            .WithAutoIndent(_config.Editor.AutoIndent)
             .WithSyntaxHighlighter(new IdeSyntaxHighlighter(IdeSyntaxHighlighter.Language.CSharp))
             .WrapWords()
-            .IsEditing(false)
+            .IsEditing(_config.Editor.StartInEditMode)
             .WithVerticalAlignment(SharpConsoleUI.Layout.VerticalAlignment.Fill)
             .WithName("editor")
             .Build();

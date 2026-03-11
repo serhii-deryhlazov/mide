@@ -33,10 +33,9 @@ partial class Program
 
         int totalWidth = _ws.DesktopDimensions.Width;
         int treeWidth  = (_treeVisible && _fileTree?.Visible == true) ? (_fileTree?.Width ?? 0) : 0;
-        const int padding = 2; // small margin for borders
 
-        int desired = Math.Max(10, totalWidth - treeWidth - padding);
-        byte editorWidth = (byte)Math.Clamp(desired, 10, byte.MaxValue);
+        int desired = Math.Max(_config.Layout.MinEditorWidth, totalWidth - treeWidth - _config.Layout.Padding);
+        byte editorWidth = (byte)Math.Clamp(desired, _config.Layout.MinEditorWidth, byte.MaxValue);
 
         _editor.Width = editorWidth;
 

@@ -48,11 +48,11 @@ partial class Program
     static void ShowCommandPrompt()
     {
         if (_ws == null) return;
-        int width = Math.Max(20, _ws.DesktopDimensions.Width - 2);
+        int width = Math.Max(_config.Layout.MinCommandWidth, _ws.DesktopDimensions.Width - 2);
 
         var dialog = new WindowBuilder(_ws)
             .WithTitle("Command")
-            .WithSize(width, 3)
+            .WithSize(width, _config.Dialogs.CommandHeight)
             .Centered()
             .AsModal()
             .Borderless()

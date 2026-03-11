@@ -1,0 +1,34 @@
+{
+  "app": {
+    "title": "mide",
+    "topStatusDefault": " mide "
+  },
+  "editor": {
+    "lineNumbers": true,
+    "highlightCurrentLine": true,
+    "autoIndent": true,
+    "startInEditMode": false
+  },
+  "tree": {
+    "visibleOnStart": false,
+    "width": 30,
+    "maxDepth": 3,
+    "ignoredDirs": [ "bin", "obj", "node_modules", "__pycache__" ]
+  },
+  "layout": {
+    "padding": 2,
+    "minEditorWidth": 10,
+    "minCommandWidth": 20
+  },
+  "dialogs": {
+    "fileFilter": "*.cs;*.py;*.js;*.ts;*.json;*.md;*.txt;*.*",
+    "findWidth": 50,
+    "findHeight": 8,
+    "gotoWidth": 40,
+    "gotoHeight": 7,
+    "commandHeight": 3
+  },
+  "startup": {
+    "readmeCandidates": [ "README.md", "Readme.md", "README.txt", "README" ]
+  }
+}

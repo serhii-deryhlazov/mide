@@ -33,7 +33,7 @@ partial class Program
     static async Task OpenFileDialogAsync(bool editMode = false, bool focusEditor = false)
     {
         if (_ws == null) return;
-        var path = await FileDialogs.ShowFilePickerAsync(_ws, filter: "*.cs;*.py;*.js;*.ts;*.json;*.md;*.txt;*.*");
+        var path = await FileDialogs.ShowFilePickerAsync(_ws, filter: _config.Dialogs.FileFilter);
         if (path != null) OpenFile(path, editMode: editMode, focusEditor: focusEditor);
     }
 
@@ -68,7 +68,7 @@ partial class Program
         if (saveAs || path == null)
         {
             var def = _currentFile != null ? Path.GetFileName(_currentFile) : "untitled.cs";
-            path = await FileDialogs.ShowSaveFileAsync(_ws, filter: "*.cs;*.py;*.js;*.ts;*.json;*.md;*.txt;*.*", defaultFileName: def);
+            path = await FileDialogs.ShowSaveFileAsync(_ws, filter: _config.Dialogs.FileFilter, defaultFileName: def);
         }
         if (path != null)
         {
@@ -98,8 +98,7 @@ partial class Program
     {
         if (_editor == null) return;
 
-        var candidates = new[] { "README.md", "Readme.md", "README.txt", "README" };
-        foreach (var name in candidates)
+        foreach (var name in _config.Startup.ReadmeCandidates)
         {
             var path = Path.Combine(_rootDir, name);
             if (File.Exists(path))

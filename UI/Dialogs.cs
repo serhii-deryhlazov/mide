@@ -15,7 +15,7 @@ partial class Program
 
         var dialog = new WindowBuilder(_ws)
             .WithTitle("Find in File")
-            .WithSize(50, 8)
+            .WithSize(_config.Dialogs.FindWidth, _config.Dialogs.FindHeight)
             .Centered()
             .AsModal()
             .Build();
@@ -61,7 +61,7 @@ partial class Program
 
         var dialog = new WindowBuilder(_ws)
             .WithTitle("Go to Line")
-            .WithSize(40, 7)
+            .WithSize(_config.Dialogs.GotoWidth, _config.Dialogs.GotoHeight)
             .Centered()
             .AsModal()
             .Build();

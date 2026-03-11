@@ -14,13 +14,13 @@ partial class Program
 
     static void AddChildren(SharpConsoleUI.Controls.TreeNode parent, string dir, int depth)
     {
-        if (depth > 3) return;
+        if (depth > _config.Tree.MaxDepth) return;
         try
         {
             foreach (var d in Directory.GetDirectories(dir).OrderBy(x => x))
             {
                 var name = Path.GetFileName(d);
-                if (name.StartsWith('.') || name is "bin" or "obj" or "node_modules" or "__pycache__") continue;
+                if (name.StartsWith('.') || _config.Tree.IgnoredDirs.Contains(name)) continue;
                 var node = parent.AddChild($"[cyan]{EscapeMarkup(name)}/[/]");
                 node.Tag = d;
                 AddChildren(node, d, depth + 1);
@@ -96,7 +96,7 @@ partial class Program
         {
             _fileTree.Visible   = _treeVisible;
             _fileTree.IsEnabled = _treeVisible;
-            _fileTree.Width     = _treeVisible ? 30 : 0;
+            _fileTree.Width     = _treeVisible ? _config.Tree.Width : 0;
 
             if (!_treeVisible)
             {
