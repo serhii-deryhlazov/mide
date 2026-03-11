@@ -21,10 +21,7 @@ partial class Program
         {
             bool isPrintable = !char.IsControl(e.KeyInfo.KeyChar) && e.KeyInfo.KeyChar != '\0';
             if (isPrintable && !_editor.IsEditing)
-            {
-                _editor.IsEditing = true;
-                _editor.HighlightCurrentLine = true;
-            }
+                SetEditorMode(EditorMode.Edit, focus: true);
 
             if (!_editor.IsEditing && e.KeyInfo.Key == ConsoleKey.LeftArrow)
             {
@@ -144,15 +141,13 @@ partial class Program
 
         if (lower is "edit" or "e")
         {
-            await OpenFileDialogAsync(editMode: true, focusEditor: true);
-            FocusEditor(editing: true);
+            await OpenFileDialogAsync(EditorMode.Edit);
             return;
         }
 
         if (lower is "open" or "o")
         {
-            await OpenFileDialogAsync(editMode: false, focusEditor: true);
-            FocusEditor(editing: false);
+            await OpenFileDialogAsync(EditorMode.Browse);
             return;
         }
 
@@ -161,7 +156,7 @@ partial class Program
             var path = cmd[(cmd.IndexOf(' ') + 1)..].Trim();
             if (!Path.IsPathRooted(path)) path = Path.Combine(_rootDir, path);
             if (File.Exists(path))
-                OpenFile(path, editMode: false, focusEditor: true);
+                OpenFile(path, mode: EditorMode.Browse, focus: true);
             else
                 Notify("Open", $"Not found: {path}", NotificationSeverity.Warning);
             return;
@@ -172,14 +167,9 @@ partial class Program
             var path = cmd[(cmd.IndexOf(' ') + 1)..].Trim();
             if (!Path.IsPathRooted(path)) path = Path.Combine(_rootDir, path);
             if (File.Exists(path))
-            {
-                OpenFile(path, editMode: true, focusEditor: true);
-                FocusEditor(editing: true);
-            }
+                OpenFile(path, mode: EditorMode.Edit, focus: true);
             else
-            {
                 Notify("Edit", $"Not found: {path}", NotificationSeverity.Warning);
-            }
             return;
         }
 
@@ -207,8 +197,7 @@ partial class Program
             try
             {
                 File.WriteAllText(path, string.Empty);
-                OpenFile(path);
-                _editor!.IsEditing = true;
+                OpenFile(path, mode: EditorMode.Edit, focus: true);
                 Notify("New", Path.GetFileName(path), NotificationSeverity.Success);
             }
             catch (Exception ex)

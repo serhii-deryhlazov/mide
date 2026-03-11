@@ -19,9 +19,10 @@ partial class Program
     static string _rootDir = Directory.GetCurrentDirectory();
     static bool _treeVisible = false;
     static bool _suppressTreeEvent = false;
-    static bool _treeWasVisibleBeforeEdit  = false; 
-    static bool _editorWasEditingBeforeTree = false;
+    static EditorMode _modeBeforeTree = EditorMode.Browse;
     static Config _config = new();
+
+    enum EditorMode { Browse, Edit }
     static Color _editorBrowseBg;
     static CancellationTokenSource _treeCts = new();
     static readonly HashSet<string> _expandedPaths = new(StringComparer.Ordinal);
@@ -101,18 +102,18 @@ partial class Program
             if (e.Node?.Tag is string path && File.Exists(path))
             {
                 _suppressTreeEvent = true;
-                OpenFile(path, fromTree: true, editMode: false, focusEditor: false);
+                // Load content without touching mode yet
+                _editor!.Content           = File.ReadAllText(path);
+                _currentFile               = path;
+                _editor.SyntaxHighlighter  = IdeSyntaxHighlighter.ForExtension(Path.GetExtension(path));
+                UpdateTitle();
+                UpdateStatusBar();
 
-                if (_treeVisible)
-                {
-                    _treeWasVisibleBeforeEdit = false; // don't restore tree on save
-                    _treeVisible = false;
-                    ApplyTreeVisibility();             // closes tree, sets grey bg
-                }
-
-                ApplyEditingMode(true);               // now switch to edit mode (no flash)
-                FocusEditor(editing: true);
-                _editor?.EnsureCursorVisible();
+                // Close tree first (sets browse bg cleanly), then switch to edit mode
+                _treeVisible = false;
+                ApplyTreeVisibility();
+                SetEditorMode(EditorMode.Edit, focus: true);
+                _editor.EnsureCursorVisible();
                 _suppressTreeEvent = false;
             }
         };
@@ -121,7 +122,7 @@ partial class Program
         {
             if (_suppressTreeEvent) return;
             if (e.Node?.Tag is string path && File.Exists(path))
-                OpenFile(path, fromTree: true, focusEditor: false);
+                OpenFile(path, fromTree: true, focus: false);
         };
 
         var layout = Controls.HorizontalGrid()
@@ -151,7 +152,7 @@ partial class Program
         _fileTree?.CollapseAll();
         if (_fileTree?.RootNodes.Count > 0)
             _fileTree.RootNodes[0].IsExpanded = true;
-        ApplyEditingMode(_config.Editor.StartInEditMode);
+        SetEditorMode(_config.Editor.StartInEditMode ? EditorMode.Edit : EditorMode.Browse);
         UpdateStatusBar();
     }
 

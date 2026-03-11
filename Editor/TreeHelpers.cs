@@ -106,17 +106,12 @@ partial class Program
 
     static void OpenTree()
     {
-        _editorWasEditingBeforeTree = _editor?.IsEditing ?? false;
+        _modeBeforeTree = (_editor?.IsEditing == true) ? EditorMode.Edit : EditorMode.Browse;
         _treeVisible = true;
         ApplyTreeVisibility();
         if (_currentFile != null)
             SyncTreeSelection(_currentFile);
-        if (_editor != null)
-        {
-            _editor.IsEditing = false;
-            _editor.HighlightCurrentLine = false;
-            _editor.SetFocus(false, FocusReason.Programmatic);
-        }
+        SetEditorMode(EditorMode.Browse, focus: false);
         _fileTree?.SetFocus(true, FocusReason.Programmatic);
     }
 
@@ -130,11 +125,9 @@ partial class Program
 
             if (!_treeVisible)
             {
-                bool wasEditing = _editorWasEditingBeforeTree;
-                _editorWasEditingBeforeTree = false;
-                ApplyEditingMode(wasEditing);
-                if (wasEditing)
-                    FocusEditor(editing: true);
+                var restoredMode = _modeBeforeTree;
+                _modeBeforeTree = EditorMode.Browse;
+                SetEditorMode(restoredMode);
             }
 
             UpdateLayoutWidths();

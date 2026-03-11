@@ -4,30 +4,28 @@ namespace mide;
 
 partial class Program
 {
-    static void FocusEditor(bool? editing = null)
-    {
-        if (_editor == null) return;
-        if (editing.HasValue) ApplyEditingMode(editing.Value);
-        _editor.SetFocus(true, FocusReason.Programmatic);
-    }
-
-    static void ApplyEditingMode(bool editing)
+    /// Single point of truth for editor mode transitions.
+    /// Sets all editor properties consistently and optionally transfers focus.
+    /// </summary>
+    static void SetEditorMode(EditorMode mode, bool focus = true)
     {
         if (_editor == null) return;
 
-        _editor.IsEditing             = editing;
-        _editor.HighlightCurrentLine  = editing;
-        _editor.ShowEditingHints      = editing;
+        bool editing = mode == EditorMode.Edit;
 
-        // When browsing, match FocusedBackgroundColor to the w
+        _editor.IsEditing            = editing;
+        _editor.HighlightCurrentLine = editing;
+        _editor.ShowEditingHints     = editing;
         _editor.FocusedBackgroundColor = _editorBrowseBg;
 
         if (!editing)
         {
             _editor.OverwriteMode = false;
             _editor.ClearSelection();
-            _editor.SetFocus(false, FocusReason.Programmatic);
         }
+
+        if (focus)
+            _editor.SetFocus(editing, FocusReason.Programmatic);
     }
 
     static void UpdateLayoutWidths()

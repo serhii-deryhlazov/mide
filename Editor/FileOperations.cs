@@ -5,24 +5,21 @@ namespace mide;
 
 partial class Program
 {
-    static void OpenFile(string path, bool fromTree = false, bool editMode = false, bool focusEditor = false)
+    static void OpenFile(string path, EditorMode mode = EditorMode.Browse, bool fromTree = false, bool focus = false)
     {
         if (_editor == null) return;
         try
         {
             _editor.Content           = File.ReadAllText(path);
             _currentFile              = path;
-            ApplyEditingMode(editMode);
             _editor.SyntaxHighlighter = IdeSyntaxHighlighter.ForExtension(Path.GetExtension(path));
+            SetEditorMode(mode, focus);
             UpdateTitle();
             UpdateStatusBar();
             Notify("Opened", Path.GetFileName(path), NotificationSeverity.Success);
 
             if (!fromTree)
                 SyncTreeSelection(path);
-
-            if (focusEditor)
-                FocusEditor(editMode);
         }
         catch (Exception ex)
         {
@@ -30,11 +27,11 @@ partial class Program
         }
     }
 
-    static async Task OpenFileDialogAsync(bool editMode = false, bool focusEditor = false)
+    static async Task OpenFileDialogAsync(EditorMode mode = EditorMode.Browse)
     {
         if (_ws == null) return;
         var path = await FileDialogs.ShowFilePickerAsync(_ws, filter: _config.Dialogs.FileFilter);
-        if (path != null) OpenFile(path, editMode: editMode, focusEditor: focusEditor);
+        if (path != null) OpenFile(path, mode, focus: true);
     }
 
     static async Task OpenFolderDialogAsync()
@@ -54,9 +51,9 @@ partial class Program
     {
         if (_editor == null) return;
         _editor.Content           = string.Empty;
-        _editor.IsEditing         = true;
         _editor.SyntaxHighlighter = new IdeSyntaxHighlighter();
         _currentFile              = null;
+        SetEditorMode(EditorMode.Edit, focus: true);
         UpdateTitle();
         UpdateStatusBar();
     }
@@ -78,14 +75,7 @@ partial class Program
                 _currentFile = path;
                 UpdateTitle();
                 Notify("Saved", Path.GetFileName(path), NotificationSeverity.Success);
-                if (_fileTree != null) PopulateTree(_fileTree, _rootDir);
-                await Task.Yield();
-                OpenFile(path, fromTree: false, editMode: false, focusEditor: false);
-                if (_treeWasVisibleBeforeEdit)
-                {
-                    _treeWasVisibleBeforeEdit = false;
-                    OpenTree();
-                }
+                OpenFile(path, mode: EditorMode.Browse, focus: false);
             }
             catch (Exception ex)
             {
@@ -108,9 +98,8 @@ partial class Program
             }
         }
 
-        _editor.Content   = Welcome;
-        _currentFile      = null;
-        _editor.IsEditing = false;
+        _editor.Content  = Welcome;
+        _currentFile     = null;
         UpdateTitle();
     }
 }
