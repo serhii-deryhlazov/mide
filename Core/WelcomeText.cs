@@ -12,21 +12,29 @@ partial class Program
         "//\n" +
         "//  A terminal IDE powered by SharpConsoleUI\n" +
         "//\n" +
-        "//  Commands (press ` to open bar):\n" +
-        "//    tree | t                 Toggle file tree\n" +
-        "//    open | o <path>          Open file (picker if no path)\n" +
-        "//    edit | e <path>          Open + enter edit mode (picker if no path)\n" +
-        "//    new  | n <path>          Create new file and start editing\n" +
-        "//    save | s                 Save current file\n" +
+        "//  Press ` to open the command prompt.\n" +
         "//\n" +
-        "//  Usage tips:\n" +
-        "//    Enter on the tree opens the file; Esc exits edit mode.\n" +
+        "//  File commands:\n" +
+        "//    open | o <path>          Open file (browse mode)\n" +
+        "//    edit | e <path>          Open file (edit mode)\n" +
+        "//    new  | n <name>          Create new file\n" +
+        "//    save | s                 Save current file  [edit mode only]\n" +
+        "//\n" +
+        "//  Navigation commands  [edit mode only]:\n" +
+        "//    :100                     Go to line 100\n" +
+        "//    :80:40                   Go to line 80, column 40\n" +
+        "//    :40:e                    Go to line 40, end of line\n" +
+        "//\n" +
+        "//  View commands:\n" +
+        "//    tree | t                 Toggle file tree\n" +
+        "//\n" +
+        "//  Keyboard shortcuts:\n" +
+        "//    Enter / any key          Switch to edit mode\n" +
+        "//    Esc                      Switch to browse mode\n" +
+        "//    Ctrl+D                   Delete current line  [edit mode]\n" +
+        "//    ←  (browse mode)         Open file tree\n" +
+        "//    →  (tree open)           Close file tree\n" +
         "//\n" +
         "//  Supported syntax highlighting:\n" +
-        "//    C# (.cs)\n" +
-        "//    Python (.py)\n" +
-        "//    JavaScript / TypeScript (.js/.ts/.tsx)\n" +
-        "//    JSON (.json)\n" +
-        "//    Markdown (.md/.markdown)\n" +
-        "//    Plain text (fallback)\n";
+        "//    C# · Python · JavaScript/TypeScript · JSON · Markdown\n";
 }
