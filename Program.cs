@@ -22,7 +22,9 @@ partial class Program
     static bool _treeWasVisibleBeforeEdit  = false; 
     static bool _editorWasEditingBeforeTree = false;
     static Config _config = new();
-    static Color _editorFocusedBg;
+    static Color _editorBrowseBg;
+    static CancellationTokenSource _treeCts = new();
+    static readonly HashSet<string> _expandedPaths = new(StringComparer.Ordinal);
 
     static async Task<int> Main(string[] args)
     {
@@ -42,11 +44,14 @@ partial class Program
             _ws.StatusBarStateService.TopStatus    = _config.App.TopStatusDefault;
             _ws.StatusBarStateService.BottomStatus = string.Empty;
 
-            Console.CancelKeyPress += (_, e) => { e.Cancel = true; _ws?.Shutdown(0); };
+            Console.CancelKeyPress += (_, e) => { e.Cancel = true; _ws?.Shutdown(0); _treeCts.Cancel(); };
 
             BuildIdeWindow(_ws);
 
+            var refreshTask = StartTreeRefreshLoop(_treeCts.Token);
             await Task.Run(() => _ws.Run());
+            _treeCts.Cancel();
+            await refreshTask;
             return 0;
         }
         catch (Exception ex)
@@ -75,28 +80,37 @@ partial class Program
         _editor.OverwriteModeChanged  += (_, _) => UpdateStatusBar();
         _editor.EditingModeChanged    += (_, _) => UpdateStatusBar();
 
-        _editorFocusedBg = _editor.FocusedBackgroundColor;
+        _editorBrowseBg  = Color.Grey11; // matches .WithBackgroundColor(Color.Grey11) on the window
+        _editor.CurrentLineHighlightColor = Color.Grey23; // visible against Grey11 background
 
         _fileTree = new TreeControl { Name = "fileTree" };
         PopulateTree(_fileTree, _rootDir);
         ApplyTreeVisibility();
+
+        _fileTree.NodeExpandCollapse += (_, e) =>
+        {
+            if (e.Node?.Tag is string p)
+            {
+                if (e.Node.IsExpanded) _expandedPaths.Add(p);
+                else _expandedPaths.Remove(p);
+            }
+        };
 
         _fileTree.NodeActivated += (_, e) =>
         {
             if (e.Node?.Tag is string path && File.Exists(path))
             {
                 _suppressTreeEvent = true;
-                OpenFile(path, fromTree: true, editMode: true, focusEditor: true);
+                OpenFile(path, fromTree: true, editMode: false, focusEditor: false);
 
                 if (_treeVisible)
                 {
-                    _treeWasVisibleBeforeEdit = true;
+                    _treeWasVisibleBeforeEdit = false; // don't restore tree on save
                     _treeVisible = false;
-                    ApplyTreeVisibility();
+                    ApplyTreeVisibility();             // closes tree, sets grey bg
                 }
 
-                _fileTree?.SetFocus(false, FocusReason.Programmatic);
-                ApplyEditingMode(true);
+                ApplyEditingMode(true);               // now switch to edit mode (no flash)
                 FocusEditor(editing: true);
                 _editor?.EnsureCursorVisible();
                 _suppressTreeEvent = false;

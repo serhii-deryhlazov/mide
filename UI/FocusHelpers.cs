@@ -19,9 +19,8 @@ partial class Program
         _editor.HighlightCurrentLine  = editing;
         _editor.ShowEditingHints      = editing;
 
-        // When browsing, match FocusedBackgroundColor to BackgroundColor so the
-        // framework's automatic re-focus doesn't produce a visible shade.
-        _editor.FocusedBackgroundColor = editing ? _editorFocusedBg : _editor.BackgroundColor;
+        // When browsing, match FocusedBackgroundColor to the w
+        _editor.FocusedBackgroundColor = _editorBrowseBg;
 
         if (!editing)
         {

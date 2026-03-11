@@ -26,7 +26,14 @@ partial class Program
                 _editor.HighlightCurrentLine = true;
             }
 
-            if (_editor.IsEditing)
+            if (!_editor.IsEditing && e.KeyInfo.Key == ConsoleKey.LeftArrow)
+            {
+                e.Handled = true;
+                ToggleTree();
+                return;
+            }
+
+            if (_editor.IsEditing || IsNavigationKey(e.KeyInfo))
             {
                 if (!_editor.HasFocus)
                     _editor.SetFocus(true, FocusReason.Programmatic);
@@ -35,7 +42,42 @@ partial class Program
             }
             return;
         }
+
+        if (_treeVisible && e.KeyInfo.KeyChar == 'd')
+        {
+            e.Handled = true;
+            _ = DeleteSelectedTreeNodeAsync();
+            return;
+        }
+
+        if (_treeVisible && e.KeyInfo.Key == ConsoleKey.RightArrow)
+        {
+            e.Handled = true;
+            ToggleTree();
+            return;
+        }
+
+        if (_treeVisible && _fileTree != null && IsTreeKey(e.KeyInfo))
+        {
+            if (!_fileTree.HasFocus)
+                _fileTree.SetFocus(true, FocusReason.Programmatic);
+            _fileTree.ProcessKey(e.KeyInfo);
+            e.Handled = true;
+            return;
+        }
     }
+
+    static bool IsNavigationKey(ConsoleKeyInfo key) =>
+        key.Key is ConsoleKey.UpArrow or ConsoleKey.DownArrow
+                or ConsoleKey.PageUp or ConsoleKey.PageDown
+                or ConsoleKey.Home or ConsoleKey.End;
+
+    static bool IsTreeKey(ConsoleKeyInfo key) =>
+        key.Key is ConsoleKey.UpArrow or ConsoleKey.DownArrow
+                or ConsoleKey.PageUp or ConsoleKey.PageDown
+                or ConsoleKey.Home or ConsoleKey.End
+                or ConsoleKey.Enter or ConsoleKey.Spacebar
+                or ConsoleKey.LeftArrow;
 
     static bool IsBacktick(ConsoleKeyInfo key)
     {

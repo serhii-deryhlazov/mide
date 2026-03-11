@@ -13,6 +13,7 @@
     "visibleOnStart": false,
     "width": 30,
     "maxDepth": 3,
+    "refreshIntervalSeconds": 5,
     "ignoredDirs": [ "bin", "obj", "node_modules", "__pycache__" ]
   },
   "layout": {

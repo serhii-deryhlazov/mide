@@ -80,4 +80,88 @@ partial class Program
         _ws.AddWindow(dialog);
         await tcs.Task;
     }
+
+    static async Task DeleteSelectedTreeNodeAsync()
+    {
+        if (_ws == null || _fileTree == null) return;
+
+        var node = _fileTree.SelectedNode;
+        if (node?.Tag is not string path || !File.Exists(path)) return;
+
+        var name = Path.GetFileName(path);
+        var confirmed = await ConfirmDeleteAsync(name);
+        if (!confirmed) return;
+
+        try
+        {
+            File.Delete(path);
+            if (_currentFile != null && Path.GetFullPath(_currentFile) == Path.GetFullPath(path))
+            {
+                _currentFile = null;
+                _editor?.SetContent(string.Empty);
+                UpdateStatusBar();
+            }
+            if (_fileTree != null)
+            {
+                PopulateTree(_fileTree, _rootDir);
+                _fileTree.CollapseAll();
+                RestoreExpandedPaths(_fileTree, _expandedPaths);
+            }
+        }
+        catch (Exception ex)
+        {
+            Notify("Delete", ex.Message, NotificationSeverity.Danger);
+        }
+    }
+
+    static async Task<bool> ConfirmDeleteAsync(string fileName)
+    {
+        if (_ws == null) return false;
+        var tcs = new TaskCompletionSource<bool>();
+
+        var dialog = new WindowBuilder(_ws)
+            .WithTitle("Confirm delete")
+            .WithSize(48, 4)
+            .Centered()
+            .AsModal()
+            .HideTitle()
+            .HideTitleButtons()
+            .Borderless()
+            .Build();
+
+        dialog.AddControl(Controls.Label($" Delete [red]{EscapeMarkup(fileName)}[/]?"));
+        dialog.AddControl(Controls.Label($" [dim]Enter[/] confirm   [dim]Bksp[/] cancel"));
+
+        // A zero-width prompt gives the dialog a focusable control so it receives keys.
+        var prompt = new PromptControl
+        {
+            Prompt = string.Empty,
+            Input = string.Empty,
+            InputWidth = 0,
+            UnfocusOnEnter = false,
+        };
+        // Enter pressed
+        prompt.Entered += (_, _) =>
+        {
+            tcs.TrySetResult(true);
+            _ws.CloseWindow(dialog);
+        };
+        dialog.AddControl(prompt);
+
+        // Backspace / Esc caught at window level (prompt input is empty so it bubbles up)
+        dialog.PreviewKeyPressed += (_, e) =>
+        {
+            if (e.KeyInfo.Key == ConsoleKey.Backspace || e.KeyInfo.Key == ConsoleKey.Escape)
+            {
+                e.Handled = true;
+                tcs.TrySetResult(false);
+                _ws.CloseWindow(dialog);
+            }
+        };
+
+        dialog.OnClosed += (_, _) => tcs.TrySetResult(false);
+        _ws.AddWindow(dialog);
+
+        return await tcs.Task;
+    }
 }

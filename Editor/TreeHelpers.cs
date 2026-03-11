@@ -12,6 +12,21 @@ partial class Program
         AddChildren(root, dir, 0);
     }
 
+    // Re-expand nodes whose tag paths were expanded before the refresh.
+    static void RestoreExpandedPaths(TreeControl tree, HashSet<string> expanded)
+    {
+        void Walk(IEnumerable<TreeNode> nodes)
+        {
+            foreach (var n in nodes)
+            {
+                if (n.Tag is string p && expanded.Contains(p))
+                    n.IsExpanded = true;
+                Walk(n.Children);
+            }
+        }
+        Walk(tree.RootNodes);
+    }
+
     static void AddChildren(SharpConsoleUI.Controls.TreeNode parent, string dir, int depth)
     {
         if (depth > _config.Tree.MaxDepth) return;
@@ -46,6 +61,20 @@ partial class Program
         _suppressTreeEvent = true;
         _fileTree.SelectNode(node);
         _fileTree.EnsureNodeVisible(node);
+        _suppressTreeEvent = false;
+    }
+
+    // Like SyncTreeSelection but skips EnsureNodeVisible so ancestors aren't expanded.
+    static void SyncTreeSelectionNoExpand(string path)
+    {
+        if (_fileTree == null) return;
+
+        var normalized = Path.GetFullPath(path);
+        var node = _fileTree.FindNodeByTag(normalized);
+        if (node == null) return;
+
+        _suppressTreeEvent = true;
+        _fileTree.SelectNode(node);
         _suppressTreeEvent = false;
     }
 
@@ -110,5 +139,28 @@ partial class Program
 
             UpdateLayoutWidths();
         }
+    }
+
+    static async Task StartTreeRefreshLoop(CancellationToken ct)
+    {
+        var interval = TimeSpan.FromSeconds(_config.Tree.RefreshIntervalSeconds);
+        try
+        {
+            while (!ct.IsCancellationRequested)
+            {
+                await Task.Delay(interval, ct);
+                if (_treeVisible && _fileTree != null)
+                {
+                    _suppressTreeEvent = true;
+                    PopulateTree(_fileTree, _rootDir);
+                    _fileTree.CollapseAll();
+                    RestoreExpandedPaths(_fileTree, _expandedPaths);
+                    if (_currentFile != null)
+                        SyncTreeSelectionNoExpand(_currentFile);
+                    _suppressTreeEvent = false;
+                }
+            }
+        }
+        catch (OperationCanceledException) { }
     }
 }

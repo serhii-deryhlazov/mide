@@ -18,7 +18,8 @@ else
       NEEDS_BUILD=true
       break
     fi
-  done < <(find "$SCRIPT_DIR" -maxdepth 1 \( -name "*.cs" -o -name "*.csproj" \) -print0)
+  done < <(find "$SCRIPT_DIR" \( -name "*.cs" -o -name "*.csproj" -o -name "*.json" \) \
+    -not -path "*/bin/*" -not -path "*/obj/*" -print0)
 fi
 
 if [ "$NEEDS_BUILD" = true ]; then
