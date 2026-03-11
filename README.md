@@ -67,17 +67,23 @@ Press `` ` `` again to dismiss the prompt without running a command.
 
 ```
 mide/
-├── Program.cs            # Main window, layout, IDE state
-├── CommandHandling.cs    # Backtick command prompt & command execution
-├── Dialogs.cs            # Find, Go-to-line, and other dialogs
-├── FileOperations.cs     # Open, save, new file logic
-├── FocusHelpers.cs       # Focus management between tree and editor
-├── TreeHelpers.cs        # File tree population and navigation
-├── SyntaxHighlighter.cs  # Multi-language syntax highlighting
-├── WelcomeText.cs        # Welcome screen content
-├── mide.csproj           # .NET 9 project file
-├── global.json           # Pins SDK to 9.0.311
-└── README.md
+├── Program.cs                  # Entry point, IDE state & main window
+├── README.md
+├── mide.csproj
+├── global.json                 # Pins SDK to 9.0.311
+├── Settings/
+│   └── default.config.json     # All tuneable defaults
+├── Core/
+│   ├── Config.cs               # Typed config loader (reads Settings/default.config.json)
+│   └── WelcomeText.cs          # Welcome screen content
+├── UI/
+│   ├── CommandHandling.cs      # Backtick command prompt & command execution
+│   ├── Dialogs.cs              # Find and Go-to-line dialogs
+│   └── FocusHelpers.cs         # Focus & layout width management
+└── Editor/
+    ├── FileOperations.cs       # Open, save, new file logic
+    ├── SyntaxHighlighter.cs    # Multi-language syntax highlighting
+    └── TreeHelpers.cs          # File tree population and navigation
 ```
 
 ## Dependencies
