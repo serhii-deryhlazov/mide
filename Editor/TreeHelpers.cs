@@ -77,6 +77,7 @@ partial class Program
 
     static void OpenTree()
     {
+        _editorWasEditingBeforeTree = _editor?.IsEditing ?? false;
         _treeVisible = true;
         ApplyTreeVisibility();
         if (_currentFile != null)
@@ -100,8 +101,11 @@ partial class Program
 
             if (!_treeVisible)
             {
-                ApplyEditingMode(true);
-                FocusEditor(editing: true);
+                bool wasEditing = _editorWasEditingBeforeTree;
+                _editorWasEditingBeforeTree = false;
+                ApplyEditingMode(wasEditing);
+                if (wasEditing)
+                    FocusEditor(editing: true);
             }
 
             UpdateLayoutWidths();

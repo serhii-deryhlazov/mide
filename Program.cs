@@ -19,8 +19,10 @@ partial class Program
     static string _rootDir = Directory.GetCurrentDirectory();
     static bool _treeVisible = false;
     static bool _suppressTreeEvent = false;
-    static bool _treeWasVisibleBeforeEdit = false;
+    static bool _treeWasVisibleBeforeEdit  = false; 
+    static bool _editorWasEditingBeforeTree = false;
     static Config _config = new();
+    static Color _editorFocusedBg;
 
     static async Task<int> Main(string[] args)
     {
@@ -72,6 +74,8 @@ partial class Program
         _editor.CursorPositionChanged += (_, _) => UpdateStatusBar();
         _editor.OverwriteModeChanged  += (_, _) => UpdateStatusBar();
         _editor.EditingModeChanged    += (_, _) => UpdateStatusBar();
+
+        _editorFocusedBg = _editor.FocusedBackgroundColor;
 
         _fileTree = new TreeControl { Name = "fileTree" };
         PopulateTree(_fileTree, _rootDir);
@@ -130,6 +134,10 @@ partial class Program
         UpdateLayoutWidths();
 
         LoadInitialFile();
+        _fileTree?.CollapseAll();
+        if (_fileTree?.RootNodes.Count > 0)
+            _fileTree.RootNodes[0].IsExpanded = true;
+        ApplyEditingMode(_config.Editor.StartInEditMode);
         UpdateStatusBar();
     }
 
