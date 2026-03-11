@@ -23,10 +23,35 @@ Terminal IDE built with [SharpConsoleUI](https://github.com/nickprotop/ConsoleEx
 
 ## Requirements
 
-- [.NET 9 SDK](https://dotnet.microsoft.com/download/dotnet/9.0)
-- macOS, Linux, or Windows with a VT-100 capable terminal
+- macOS with a VT-100 capable terminal
+- [.NET 9 SDK](https://dotnet.microsoft.com/download/dotnet/9.0) *(only needed to build from source)*
 
-## Build & run
+## Install
+
+### Homebrew (macOS)
+
+```bash
+brew tap serhii-deryhlazov/mide
+brew install mide
+```
+
+### Manual (macOS)
+
+**Apple Silicon (arm64)**
+```bash
+curl -L https://github.com/serhii-deryhlazov/mide/releases/download/v1.0.0/mide-osx-arm64.tar.gz | tar xz
+chmod +x mide && mv mide /usr/local/bin/
+```
+
+**Intel (x64)**
+```bash
+curl -L https://github.com/serhii-deryhlazov/mide/releases/download/v1.0.0/mide-osx-x64.tar.gz | tar xz
+chmod +x mide && mv mide /usr/local/bin/
+```
+
+No .NET runtime required — fully self-contained binary.
+
+## Build & run from source
 
 ```bash
 # Build
