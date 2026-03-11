@@ -144,12 +144,16 @@ partial class Program
                 await Task.Delay(interval, ct);
                 if (_treeVisible && _fileTree != null)
                 {
+                    var selectedPath = _fileTree.SelectedNode?.Tag as string;
+
                     _suppressTreeEvent = true;
                     PopulateTree(_fileTree, _rootDir);
                     _fileTree.CollapseAll();
                     RestoreExpandedPaths(_fileTree, _expandedPaths);
-                    if (_currentFile != null)
-                        SyncTreeSelectionNoExpand(_currentFile);
+
+                    var pathToSelect = selectedPath ?? _currentFile;
+                    if (pathToSelect != null)
+                        SyncTreeSelectionNoExpand(pathToSelect);
                     _suppressTreeEvent = false;
                 }
             }

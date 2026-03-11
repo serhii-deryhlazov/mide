@@ -86,21 +86,45 @@ partial class Program
         if (_ws == null || _fileTree == null) return;
 
         var node = _fileTree.SelectedNode;
-        if (node?.Tag is not string path || !File.Exists(path)) return;
+        if (node?.Tag is not string path) return;
 
-        var name = Path.GetFileName(path);
+        bool isDir  = Directory.Exists(path);
+        bool isFile = !isDir && File.Exists(path);
+        if (!isDir && !isFile) return;
+
+        var name = isDir
+            ? Path.GetFileName(path) + "/"
+            : Path.GetFileName(path);
         var confirmed = await ConfirmDeleteAsync(name);
         if (!confirmed) return;
 
         try
         {
-            File.Delete(path);
-            if (_currentFile != null && Path.GetFullPath(_currentFile) == Path.GetFullPath(path))
+            if (isDir)
             {
-                _currentFile = null;
-                _editor?.SetContent(string.Empty);
-                UpdateStatusBar();
+                Directory.Delete(path, recursive: true);
+                // Remove any expanded-path bookmarks that were inside the deleted folder
+                _expandedPaths.RemoveWhere(p => p == path || p.StartsWith(path + Path.DirectorySeparatorChar));
+                // Clear current file if it was inside the deleted folder
+                if (_currentFile != null &&
+                    Path.GetFullPath(_currentFile).StartsWith(Path.GetFullPath(path) + Path.DirectorySeparatorChar))
+                {
+                    _currentFile = null;
+                    _editor?.SetContent(string.Empty);
+                    UpdateStatusBar();
+                }
             }
+            else
+            {
+                File.Delete(path);
+                if (_currentFile != null && Path.GetFullPath(_currentFile) == Path.GetFullPath(path))
+                {
+                    _currentFile = null;
+                    _editor?.SetContent(string.Empty);
+                    UpdateStatusBar();
+                }
+            }
+
             if (_fileTree != null)
             {
                 PopulateTree(_fileTree, _rootDir);
