@@ -4,9 +4,6 @@ namespace mide;
 
 partial class Program
 {
-    /// Single point of truth for editor mode transitions.
-    /// Sets all editor properties consistently and optionally transfers focus.
-    /// </summary>
     static void SetEditorMode(EditorMode mode, bool focus = true)
     {
         if (_editor == null) return;

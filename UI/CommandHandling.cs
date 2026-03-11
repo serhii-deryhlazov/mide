@@ -23,6 +23,15 @@ partial class Program
             if (isPrintable && !_editor.IsEditing)
                 SetEditorMode(EditorMode.Edit, focus: true);
 
+            if (_editor.IsEditing
+                && e.KeyInfo.Key == ConsoleKey.D
+                && e.KeyInfo.Modifiers == ConsoleModifiers.Control)
+            {
+                e.Handled = true;
+                DeleteCurrentLine();
+                return;
+            }
+
             if (!_editor.IsEditing && e.KeyInfo.Key == ConsoleKey.LeftArrow)
             {
                 e.Handled = true;
@@ -181,7 +190,53 @@ partial class Program
 
         if (lower is "save" or "s")
         {
+            if (_editor?.IsEditing != true)
+            {
+                Notify("Save", "Not in edit mode", NotificationSeverity.Warning);
+                return;
+            }
             await SaveAsync(false);
+            return;
+        }
+
+        // :line  |  :line:col  |  :line:e
+        if (cmd.StartsWith(':'))
+        {
+            if (_editor?.IsEditing != true)
+            {
+                Notify("Go to", "Not in edit mode", NotificationSeverity.Warning);
+                return;
+            }
+            var parts = cmd[1..].Split(':');
+            if (int.TryParse(parts[0], out int line) && line >= 1)
+            {
+                _editor.GoToLine(line);
+
+                if (parts.Length >= 2 && !string.IsNullOrEmpty(parts[1]))
+                {
+                    var lines = (_editor.Content ?? "").Split('\n');
+                    int lineLength = line <= lines.Length ? lines[line - 1].Length : 0;
+
+                    int col; // 0-based for SetLogicalCursorPosition
+                    if (parts[1].Equals("e", StringComparison.OrdinalIgnoreCase))
+                        col = lineLength;                                         // after last char
+                    else if (int.TryParse(parts[1], out int parsedCol) && parsedCol >= 1)
+                        col = Math.Min(parsedCol - 1, lineLength);               // 1-based → 0-based
+                    else
+                        col = 0;
+
+                    _editor.SetLogicalCursorPosition(new System.Drawing.Point(col, line - 1));
+                    Notify("Go to", $"Ln {line}, Col {col + 1}", NotificationSeverity.Info);
+                }
+                else
+                {
+                    Notify("Go to", $"Ln {line}", NotificationSeverity.Info);
+                }
+            }
+            else
+            {
+                Notify("Go to", "Usage: :line  :line:col  :line:e", NotificationSeverity.Warning);
+            }
             return;
         }
 
@@ -208,5 +263,24 @@ partial class Program
         }
 
         Notify("Command", "Unknown command", NotificationSeverity.Warning);
+    }
+
+    static void DeleteCurrentLine()
+    {
+        if (_editor == null) return;
+
+        var content = _editor.Content ?? string.Empty;
+        var lines   = content.Split('\n').ToList();
+        int lineIdx = _editor.CurrentLine - 1; // CurrentLine is 1-based
+
+        if (lineIdx < 0 || lineIdx >= lines.Count) return;
+
+        lines.RemoveAt(lineIdx);
+
+        // Keep cursor on the same line index (or the last line if we deleted the last one)
+        int targetLine = Math.Min(lineIdx + 1, Math.Max(lines.Count, 1));
+
+        _editor.Content = string.Join('\n', lines);
+        _editor.GoToLine(targetLine);
     }
 }
