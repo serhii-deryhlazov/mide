@@ -28,7 +28,7 @@
   },
   "tree": {
     "visibleOnStart": false,
-    "width": 40,
+    "width": 30,
     "maxDepth": 3,
     "refreshIntervalSeconds": 5,
     "ignoredDirs": [ "bin", "obj", "node_modules", "__pycache__" ]
