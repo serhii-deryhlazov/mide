@@ -1,8 +1,6 @@
-using SharpConsoleUI;
 using SharpConsoleUI.Builders;
 using SharpConsoleUI.Controls;
 using SharpConsoleUI.Core;
-using SharpConsoleUI.Dialogs;
 
 namespace mide;
 
@@ -137,11 +135,12 @@ partial class Program
     static async Task ExecuteCommand(string text)
     {
         var cmd = text.Trim();
+
         if (string.IsNullOrEmpty(cmd)) return;
 
         var lower = cmd.ToLowerInvariant();
 
-        if (lower is "tree" or "t" or "toggle tree" or "toggle")
+        if (lower is "tree" or "t")
         {
             ToggleTree();
             Notify("Tree", _treeVisible ? "Shown" : "Hidden", NotificationSeverity.Info);
@@ -163,7 +162,9 @@ partial class Program
         if (lower.StartsWith("open ") || lower.StartsWith("o "))
         {
             var path = cmd[(cmd.IndexOf(' ') + 1)..].Trim();
+
             if (!Path.IsPathRooted(path)) path = Path.Combine(_rootDir, path);
+
             if (File.Exists(path))
                 OpenFile(path, mode: EditorMode.Browse, focus: true);
             else
@@ -196,6 +197,55 @@ partial class Program
                 return;
             }
             await SaveAsync(false);
+            return;
+        }
+
+        if (lower.StartsWith("new ") || lower.StartsWith("n "))
+        {
+            var name = cmd[(cmd.IndexOf(' ') + 1)..].Trim();
+            if (string.IsNullOrEmpty(name))
+            {
+                Notify("New", "Specify path", NotificationSeverity.Warning);
+                return;
+            }
+
+            // Treat leading '/' as workspace-relative (not absolute root) to avoid permission issues on macOS/Linux.
+            bool leadingSeparator = name.StartsWith(Path.DirectorySeparatorChar) || name.StartsWith(Path.AltDirectorySeparatorChar);
+            var rawPath = leadingSeparator
+                ? Path.Combine(_rootDir, name.TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar))
+                : (Path.IsPathRooted(name) ? name : Path.Combine(_rootDir, name));
+
+            // Use the original token (not the rooted version) for intent checks so we respect trailing separators and extensions.
+            bool endsWithSep = name.EndsWith(Path.DirectorySeparatorChar) || name.EndsWith(Path.AltDirectorySeparatorChar);
+            bool hasExt = Path.HasExtension(name);
+            bool hasSeparator = name.Contains(Path.DirectorySeparatorChar) || name.Contains(Path.AltDirectorySeparatorChar);
+            bool treatAsDir = endsWithSep || (!hasExt && hasSeparator);
+
+            var normalized = Path.GetFullPath(rawPath);
+
+            try
+            {
+                if (treatAsDir)
+                {
+                    Directory.CreateDirectory(normalized);
+                    Notify("New", $"Folder: {normalized}", NotificationSeverity.Success);
+                    RefreshTree(normalized);
+                }
+                else
+                {
+                    var parent = Path.GetDirectoryName(normalized);
+                    if (!string.IsNullOrEmpty(parent)) Directory.CreateDirectory(parent);
+                    File.WriteAllText(normalized, string.Empty);
+                    Notify("New", Path.GetFileName(normalized), NotificationSeverity.Success);
+                    RefreshTree(normalized);
+                    OpenFile(normalized, mode: EditorMode.Edit, focus: true);
+                }
+            }
+            catch (Exception ex)
+            {
+                Notify("New", ex.Message, NotificationSeverity.Danger);
+            }
+
             return;
         }
 
@@ -236,28 +286,6 @@ partial class Program
             else
             {
                 Notify("Go to", "Usage: :line  :line:col  :line:e", NotificationSeverity.Warning);
-            }
-            return;
-        }
-
-        if (lower.StartsWith("new ") || lower.StartsWith("n "))
-        {
-            var name = cmd[(cmd.IndexOf(' ') + 1)..].Trim();
-            if (string.IsNullOrEmpty(name))
-            {
-                Notify("New", "Specify filename", NotificationSeverity.Warning);
-                return;
-            }
-            var path = Path.IsPathRooted(name) ? name : Path.Combine(_rootDir, name);
-            try
-            {
-                File.WriteAllText(path, string.Empty);
-                OpenFile(path, mode: EditorMode.Edit, focus: true);
-                Notify("New", Path.GetFileName(path), NotificationSeverity.Success);
-            }
-            catch (Exception ex)
-            {
-                Notify("New", ex.Message, NotificationSeverity.Danger);
             }
             return;
         }

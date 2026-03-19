@@ -160,4 +160,18 @@ partial class Program
         }
         catch (OperationCanceledException) { }
     }
+
+    static void RefreshTree(string? pathToSelect = null)
+    {
+        if (_fileTree == null) return;
+
+        PopulateTree(_fileTree, _rootDir);
+        _fileTree.CollapseAll();
+        RestoreExpandedPaths(_fileTree, _expandedPaths);
+
+        if (pathToSelect != null)
+        {
+            SyncTreeSelection(pathToSelect);
+        }
+    }
 }
