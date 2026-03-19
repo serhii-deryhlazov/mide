@@ -5,6 +5,8 @@ using SharpConsoleUI.Configuration;
 using SharpConsoleUI.Controls;
 using SharpConsoleUI.Core;
 using SharpConsoleUI.Drivers;
+using System.Linq;
+using System.Reflection;
 
 namespace mide;
 
@@ -69,7 +71,7 @@ partial class Program
             .WithLineNumbers(_config.Editor.LineNumbers)
             .WithHighlightCurrentLine(_config.Editor.HighlightCurrentLine)
             .WithAutoIndent(_config.Editor.AutoIndent)
-            .WithSyntaxHighlighter(new IdeSyntaxHighlighter(IdeSyntaxHighlighter.Language.CSharp))
+            .WithSyntaxHighlighter(new IdeSyntaxHighlighter(IdeSyntaxHighlighter.Language.CSharp, _config.Editor))
             .WrapWords()
             .IsEditing(_config.Editor.StartInEditMode)
             .WithVerticalAlignment(SharpConsoleUI.Layout.VerticalAlignment.Fill)
@@ -81,8 +83,8 @@ partial class Program
         _editor.OverwriteModeChanged  += (_, _) => UpdateStatusBar();
         _editor.EditingModeChanged    += (_, _) => UpdateStatusBar();
 
-        _editorBrowseBg  = Color.Grey11; // matches .WithBackgroundColor(Color.Grey11) on the window
-        _editor.CurrentLineHighlightColor = Color.Grey23; // visible against Grey11 background
+    _editorBrowseBg  = ParseColor(_config.Editor.BrowseBackgroundColor, Color.FromHex("#001a33"));
+    _editor.CurrentLineHighlightColor = ParseColor(_config.Editor.CurrentLineHighlightColor, Color.FromHex("#008b8b"));
 
         _fileTree = new TreeControl { Name = "fileTree" };
         PopulateTree(_fileTree, _rootDir);
@@ -105,7 +107,7 @@ partial class Program
                 // Load content without touching mode yet
                 _editor!.Content           = File.ReadAllText(path);
                 _currentFile               = path;
-                _editor.SyntaxHighlighter  = IdeSyntaxHighlighter.ForExtension(Path.GetExtension(path));
+                _editor.SyntaxHighlighter  = IdeSyntaxHighlighter.ForExtension(Path.GetExtension(path), _config.Editor);
                 UpdateTitle();
                 UpdateStatusBar();
 
@@ -139,8 +141,8 @@ partial class Program
             .HideTitle()
             .HideTitleButtons()
             .Borderless()
-            .WithBackgroundColor(Color.Grey11)
-            .WithForegroundColor(Color.White)
+            .WithBackgroundColor(ParseColor(_config.Editor.BackgroundColor, Color.FromHex("#001a33")))
+            .WithForegroundColor(ParseColor(_config.Editor.ForegroundColor, Color.FromHex("#fffdf5")))
             .AddControl(layout)
             .BuildAndShow();
 
@@ -197,4 +199,21 @@ partial class Program
 
     static string EscapeMarkup(string s) =>
         s.Replace("[", "[[").Replace("]", "]]");
+
+    static Color ParseColor(string? value, Color fallback)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return fallback;
+        // named color lookup (case-insensitive)
+        var prop = typeof(Color).GetProperties(BindingFlags.Public | BindingFlags.Static)
+            .FirstOrDefault(p => string.Equals(p.Name, value, StringComparison.OrdinalIgnoreCase) && p.PropertyType == typeof(Color));
+        if (prop?.GetValue(null) is Color named) return named;
+
+        // hex (#RRGGBB) support
+        if (value.StartsWith('#'))
+        {
+            try { return Color.FromHex(value); } catch { return fallback; }
+        }
+
+        return fallback;
+    }
 }

@@ -12,7 +12,7 @@ partial class Program
         {
             _editor.Content           = File.ReadAllText(path);
             _currentFile              = path;
-            _editor.SyntaxHighlighter = IdeSyntaxHighlighter.ForExtension(Path.GetExtension(path));
+            _editor.SyntaxHighlighter = IdeSyntaxHighlighter.ForExtension(Path.GetExtension(path), _config.Editor);
             SetEditorMode(mode, focus);
             UpdateTitle();
             UpdateStatusBar();
@@ -51,7 +51,7 @@ partial class Program
     {
         if (_editor == null) return;
         _editor.Content           = string.Empty;
-        _editor.SyntaxHighlighter = new IdeSyntaxHighlighter();
+    _editor.SyntaxHighlighter = new IdeSyntaxHighlighter(settings: _config.Editor);
         _currentFile              = null;
         SetEditorMode(EditorMode.Edit, focus: true);
         UpdateTitle();

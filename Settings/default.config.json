@@ -7,11 +7,28 @@
     "lineNumbers": true,
     "highlightCurrentLine": true,
     "autoIndent": true,
-    "startInEditMode": false
+    "startInEditMode": false,
+
+    "backgroundColor": "#001a33",
+    "foregroundColor": "#fffdf5",
+    "browseBackgroundColor": "#001a33",
+    "currentLineHighlightColor": "#008b8b",
+
+    "syntaxKeywordColor": "#1e90ff",
+    "syntaxTypeColor": "#48d1cc",
+    "syntaxStringColor": "#cd8500",
+    "syntaxCommentColor": "#00ff00",
+    "syntaxNumberColor": "#00ffff",
+    "syntaxPunctuationColor": "#00bfff",
+    "syntaxIdentifierColor": "#ffecb3",
+    "syntaxJsonKeyColor": "#ffd700",
+    "syntaxMarkdownHeadColor": "#ffff00",
+    "syntaxMarkdownBoldColor": "#ffffff",
+    "syntaxPythonDecorColor": "#eeaeee"
   },
   "tree": {
     "visibleOnStart": false,
-    "width": 30,
+    "width": 40,
     "maxDepth": 3,
     "refreshIntervalSeconds": 5,
     "ignoredDirs": [ "bin", "obj", "node_modules", "__pycache__" ]

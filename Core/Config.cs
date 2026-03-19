@@ -9,12 +9,31 @@ sealed class AppSettings
     [JsonPropertyName("topStatusDefault")] public string TopStatusDefault { get; init; } = " mide ";
 }
 
-sealed class EditorSettings
+public sealed class EditorSettings
 {
     [JsonPropertyName("lineNumbers")] public bool LineNumbers { get; init; } = true;
     [JsonPropertyName("highlightCurrentLine")] public bool HighlightCurrentLine { get; init; } = true;
     [JsonPropertyName("autoIndent")] public bool AutoIndent { get; init; } = true;
     [JsonPropertyName("startInEditMode")] public bool StartInEditMode { get; init; } = false;
+
+    // Editor surface colors
+    [JsonPropertyName("backgroundColor")] public string BackgroundColor { get; init; } = "#001a33";
+    [JsonPropertyName("foregroundColor")] public string ForegroundColor { get; init; } = "#fffdf5";
+    [JsonPropertyName("browseBackgroundColor")] public string BrowseBackgroundColor { get; init; } = "#001a33";
+    [JsonPropertyName("currentLineHighlightColor")] public string CurrentLineHighlightColor { get; init; } = "#008b8b";
+
+    // Syntax colors
+    [JsonPropertyName("syntaxKeywordColor")] public string SyntaxKeywordColor { get; init; } = "#1e90ff";
+    [JsonPropertyName("syntaxTypeColor")] public string SyntaxTypeColor { get; init; } = "#48d1cc";
+    [JsonPropertyName("syntaxStringColor")] public string SyntaxStringColor { get; init; } = "#cd8500";
+    [JsonPropertyName("syntaxCommentColor")] public string SyntaxCommentColor { get; init; } = "#00ff00";
+    [JsonPropertyName("syntaxNumberColor")] public string SyntaxNumberColor { get; init; } = "#00ffff";
+    [JsonPropertyName("syntaxPunctuationColor")] public string SyntaxPunctuationColor { get; init; } = "#00bfff";
+    [JsonPropertyName("syntaxIdentifierColor")] public string SyntaxIdentifierColor { get; init; } = "#ffecb3";
+    [JsonPropertyName("syntaxJsonKeyColor")] public string SyntaxJsonKeyColor { get; init; } = "#ffd700";
+    [JsonPropertyName("syntaxMarkdownHeadColor")] public string SyntaxMarkdownHeadColor { get; init; } = "#ffff00";
+    [JsonPropertyName("syntaxMarkdownBoldColor")] public string SyntaxMarkdownBoldColor { get; init; } = "#ffffff";
+    [JsonPropertyName("syntaxPythonDecorColor")] public string SyntaxPythonDecorColor { get; init; } = "#eeaeee";
 }
 
 sealed class TreeSettings
