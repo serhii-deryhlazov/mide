@@ -5,7 +5,6 @@ using SharpConsoleUI.Configuration;
 using SharpConsoleUI.Controls;
 using SharpConsoleUI.Core;
 using SharpConsoleUI.Drivers;
-using System.Linq;
 using System.Reflection;
 
 namespace mide;
@@ -44,7 +43,7 @@ partial class Program
                 options: new ConsoleWindowSystemOptions(
                     StatusBarOptions: new StatusBarOptions(ShowTaskBar: false)));
 
-            _ws.StatusBarStateService.TopStatus    = _config.App.TopStatusDefault;
+            _ws.StatusBarStateService.TopStatus = _config.App.TopStatusDefault;
             _ws.StatusBarStateService.BottomStatus = string.Empty;
 
             Console.CancelKeyPress += (_, e) => { e.Cancel = true; _ws?.Shutdown(0); _treeCts.Cancel(); };
@@ -78,18 +77,19 @@ partial class Program
             .WithName("editor")
             .Build();
 
-        _editor.ContentChanged        += (_, _) => UpdateStatusBar();
+        _editor.ContentChanged += (_, _) => UpdateStatusBar();
         _editor.CursorPositionChanged += (_, _) => UpdateStatusBar();
-        _editor.OverwriteModeChanged  += (_, _) => UpdateStatusBar();
-        _editor.EditingModeChanged    += (_, _) => UpdateStatusBar();
+        _editor.OverwriteModeChanged += (_, _) => UpdateStatusBar();
+        _editor.EditingModeChanged += (_, _) => UpdateStatusBar();
 
-    _editorBrowseBg  = ParseColor(_config.Editor.BrowseBackgroundColor, Color.FromHex("#001a33"));
-    _editor.CurrentLineHighlightColor = ParseColor(_config.Editor.CurrentLineHighlightColor, Color.FromHex("#008b8b"));
+        _editorBrowseBg  = ParseColor(_config.Editor.BrowseBackgroundColor, Color.FromHex("#001a33"));
+        _editor.CurrentLineHighlightColor = ParseColor(_config.Editor.CurrentLineHighlightColor, Color.FromHex("#008b8b"));
 
         _fileTree = new TreeControl { Name = "fileTree" };
         PopulateTree(_fileTree, _rootDir);
         ApplyTreeVisibility();
 
+        // Keeping folders expansion/collapse state
         _fileTree.NodeExpandCollapse += (_, e) =>
         {
             if (e.Node?.Tag is string p)
@@ -99,27 +99,31 @@ partial class Program
             }
         };
 
+        // Open file (on Enter)
         _fileTree.NodeActivated += (_, e) =>
         {
             if (e.Node?.Tag is string path && File.Exists(path))
             {
                 _suppressTreeEvent = true;
-                // Load content without touching mode yet
-                _editor!.Content           = File.ReadAllText(path);
-                _currentFile               = path;
-                _editor.SyntaxHighlighter  = IdeSyntaxHighlighter.ForExtension(Path.GetExtension(path), _config.Editor);
+
+                _editor!.Content = File.ReadAllText(path);
+                _currentFile = path;
+                _editor.SyntaxHighlighter = IdeSyntaxHighlighter.ForExtension(
+                    Path.GetExtension(path), _config.Editor);
+
                 UpdateTitle();
                 UpdateStatusBar();
 
-                // Close tree first (sets browse bg cleanly), then switch to edit mode
                 _treeVisible = false;
                 ApplyTreeVisibility();
+
                 SetEditorMode(EditorMode.Edit, focus: true);
                 _editor.EnsureCursorVisible();
                 _suppressTreeEvent = false;
             }
         };
 
+        // Show file on selection in a tree (without Enter)
         _fileTree.SelectedNodeChanged += (_, e) =>
         {
             if (_suppressTreeEvent) return;
@@ -151,9 +155,9 @@ partial class Program
         UpdateLayoutWidths();
 
         LoadInitialFile();
+
         _fileTree?.CollapseAll();
-        if (_fileTree?.RootNodes.Count > 0)
-            _fileTree.RootNodes[0].IsExpanded = true;
+
         SetEditorMode(_config.Editor.StartInEditMode ? EditorMode.Edit : EditorMode.Browse);
         UpdateStatusBar();
     }
@@ -203,6 +207,7 @@ partial class Program
     static Color ParseColor(string? value, Color fallback)
     {
         if (string.IsNullOrWhiteSpace(value)) return fallback;
+        
         // named color lookup (case-insensitive)
         var prop = typeof(Color).GetProperties(BindingFlags.Public | BindingFlags.Static)
             .FirstOrDefault(p => string.Equals(p.Name, value, StringComparison.OrdinalIgnoreCase) && p.PropertyType == typeof(Color));
@@ -211,7 +216,8 @@ partial class Program
         // hex (#RRGGBB) support
         if (value.StartsWith('#'))
         {
-            try { return Color.FromHex(value); } catch { return fallback; }
+            try { return Color.FromHex(value); } 
+            catch { return fallback; }
         }
 
         return fallback;

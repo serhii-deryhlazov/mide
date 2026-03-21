@@ -10,9 +10,9 @@ partial class Program
 
         bool editing = mode == EditorMode.Edit;
 
-        _editor.IsEditing            = editing;
+        _editor.IsEditing = editing;
         _editor.HighlightCurrentLine = editing;
-        _editor.ShowEditingHints     = editing;
+        _editor.ShowEditingHints = editing;
         _editor.FocusedBackgroundColor = _editorBrowseBg;
 
         if (!editing)
@@ -39,17 +39,17 @@ partial class Program
 
         if (_layout?.Columns is { Count: >= 2 })
         {
-            var left  = _layout.Columns[0];
+            var left = _layout.Columns[0];
             var right = _layout.Columns[1];
 
-            left.FlexFactor  = 0;
-            left.Width       = _treeVisible ? treeWidth : 0;
-            left.MinWidth    = _treeVisible ? treeWidth : 0;
-            left.MaxWidth    = _treeVisible ? treeWidth : 0;
+            left.FlexFactor = 0;
+            left.Width = _treeVisible ? treeWidth : 0;
+            left.MinWidth = _treeVisible ? treeWidth : 0;
+            left.MaxWidth = _treeVisible ? treeWidth : 0;
 
             right.FlexFactor = 1;
-            right.Width      = editorWidth;
-            right.MinWidth   = editorWidth;
+            right.Width = editorWidth;
+            right.MinWidth = editorWidth;
         }
     }
 }

@@ -7,9 +7,22 @@ partial class Program
     static void PopulateTree(TreeControl tree, string dir)
     {
         tree.Clear();
-        var root = tree.AddRootNode($"[bold yellow]{EscapeMarkup(Path.GetFileName(dir))}/[/]");
-        root.Tag = dir;
-        AddChildren(root, dir, 0);
+        // Add the workspace children as top-level nodes (no wrapper root)
+        foreach (var d in Directory.GetDirectories(dir).OrderBy(x => x))
+        {
+            var name = Path.GetFileName(d);
+            if (name.StartsWith('.') || _config.Tree.IgnoredDirs.Contains(name)) continue;
+            var node = tree.AddRootNode($"[cyan]{EscapeMarkup(name)}/[/]");
+            node.Tag = d;
+            AddChildren(node, d, 1);
+        }
+
+        foreach (var f in Directory.GetFiles(dir).OrderBy(x => x))
+        {
+            var name = Path.GetFileName(f);
+            var node = tree.AddRootNode($"{FileIcon(name)} {EscapeMarkup(name)}");
+            node.Tag = f;
+        }
     }
 
     // Re-expand nodes whose tag paths were expanded before the refresh.
@@ -119,9 +132,9 @@ partial class Program
     {
         if (_fileTree != null)
         {
-            _fileTree.Visible   = _treeVisible;
+            _fileTree.Visible = _treeVisible;
             _fileTree.IsEnabled = _treeVisible;
-            _fileTree.Width     = _treeVisible ? _config.Tree.Width : 0;
+            _fileTree.Width = _treeVisible ? _config.Tree.Width : 0;
 
             if (!_treeVisible)
             {

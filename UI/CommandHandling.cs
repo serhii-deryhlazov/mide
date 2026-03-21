@@ -1,3 +1,4 @@
+using SharpConsoleUI;
 using SharpConsoleUI.Builders;
 using SharpConsoleUI.Controls;
 using SharpConsoleUI.Core;
@@ -95,11 +96,23 @@ partial class Program
     {
         if (_ws == null) return;
         int width = Math.Max(_config.Layout.MinCommandWidth, _ws.DesktopDimensions.Width - 2);
+    int height = _config.Dialogs.CommandHeight; // default height; we’ll expand visually only when suggestions show
+
+    // bottom-centered placement
+    int posX = Math.Max(0, (_ws.DesktopDimensions.Width - width) / 2);
+    int posY = Math.Max(0, _ws.DesktopDimensions.Height - height - 1);
+
+        // Precompute indexes once per prompt invocation
+        var pathIndex = BuildPathIndex();
+        var fileIndex = pathIndex
+            .Where(p => !p.EndsWith("/"))
+            .Select(p => Path.Combine(_rootDir, p.Replace('/', Path.DirectorySeparatorChar)))
+            .ToList();
 
         var dialog = new WindowBuilder(_ws)
             .WithTitle("Command")
-            .WithSize(width, _config.Dialogs.CommandHeight)
-            .Centered()
+            .WithSize(width, height)
+            .AtPosition(posX, posY)
             .AsModal()
             .Borderless()
             .HideTitle()
@@ -128,6 +141,73 @@ partial class Program
             _ws.CloseWindow(dialog);
         };
         dialog.AddControl(prompt);
+
+    // suggestion popup (separate borderless modal that won't steal typing focus)
+    Window? suggestionWindow = null;
+
+        void CloseSuggestions()
+        {
+            if (_ws != null && suggestionWindow != null)
+            {
+                _ws.CloseWindow(suggestionWindow);
+            }
+            suggestionWindow = null;
+        }
+
+        void ShowSuggestions(string text)
+        {
+            if (_ws == null) return;
+            if (string.IsNullOrEmpty(text))
+            {
+                CloseSuggestions();
+                return;
+            }
+
+            var lines = text.Split('\n');
+            int suggHeight = Math.Max(3, lines.Length + 1);
+
+            CloseSuggestions();
+
+            int suggX = posX;
+            int suggY = Math.Max(0, posY - suggHeight - 1);
+
+            suggestionWindow = new WindowBuilder(_ws)
+                .WithTitle(string.Empty)
+                .WithSize(width, suggHeight)
+                .AtPosition(suggX, suggY)
+                .Borderless()
+                .HideTitle()
+                .HideTitleButtons()
+                .Build();
+
+            suggestionWindow.AddControl(Controls.Label(text));
+            suggestionWindow.PreviewKeyPressed += (_, e) =>
+            {
+                e.Handled = true;              // prevent suggestion window from consuming keys
+                prompt.SetFocus(true, FocusReason.Programmatic);
+            };
+            _ws.AddWindow(suggestionWindow);
+
+            // keep typing focus on the main prompt
+            prompt.SetFocus(true, FocusReason.Programmatic);
+        }
+
+        dialog.KeyPressed += (_, e) =>
+        {
+            // Let the prompt handle input; we only mirror the text to drive suggestions.
+            var current = prompt.Input ?? string.Empty;
+
+            // Preview the character that's about to be added/removed.
+            if (!char.IsControl(e.KeyInfo.KeyChar) && e.KeyInfo.KeyChar != '\0')
+                current += e.KeyInfo.KeyChar;
+            else if (e.KeyInfo.Key == ConsoleKey.Backspace && current.Length > 0)
+                current = current[..^1];
+
+            var text = BuildSuggestions(current, pathIndex, fileIndex);
+            ShowSuggestions(text);
+        };
+
+        dialog.OnClosed += (_, _) => CloseSuggestions();
 
         _ws.AddWindow(dialog);
     }
@@ -310,5 +390,80 @@ partial class Program
 
         _editor.Content = string.Join('\n', lines);
         _editor.GoToLine(targetLine);
+    }
+
+    static string BuildSuggestions(string input, List<string> pathIndex, List<string> fileIndex)
+    {
+        if (input.StartsWith('/'))
+        {
+            var term = input[1..];
+            if (term.Length < 3) return string.Empty;
+
+            return string.Join('\n', pathIndex
+                .Where(p => p.Contains(term, StringComparison.OrdinalIgnoreCase))
+                .Take(5)
+                .Select(p => "/" + p.Replace(Path.DirectorySeparatorChar, '/')));
+        }
+        else if (input.StartsWith('>'))
+        {
+            var term = input[1..];
+            if (term.Length < 3) return string.Empty;
+
+            return string.Join('\n', GetContentSuggestions(term, fileIndex, 5)
+                .Select(r => "/" + r.Replace(Path.DirectorySeparatorChar, '/')));
+        }
+
+        return string.Empty;
+    }
+
+    static List<string> BuildPathIndex()
+    {
+        var list = new List<string>();
+        if (!Directory.Exists(_rootDir)) return list;
+
+        foreach (var dir in Directory.EnumerateDirectories(_rootDir, "*", SearchOption.AllDirectories))
+        {
+            var rel = ToRelative(dir).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            if (!string.IsNullOrEmpty(rel)) list.Add(rel + "/");
+        }
+
+        foreach (var file in Directory.EnumerateFiles(_rootDir, "*", SearchOption.AllDirectories))
+        {
+            var rel = ToRelative(file);
+            if (!string.IsNullOrEmpty(rel)) list.Add(rel);
+        }
+
+        return list;
+    }
+
+    static IEnumerable<string> GetContentSuggestions(string term, List<string> files, int max)
+    {
+        var results = new List<string>();
+        foreach (var file in files)
+        {
+            if (results.Count >= max) break;
+            try
+            {
+                int lineNo = 0;
+                foreach (var line in File.ReadLines(file))
+                {
+                    lineNo++;
+                    if (line.IndexOf(term, StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        var rel = ToRelative(file);
+                        results.Add($"{rel}:{lineNo}");
+                        break;
+                    }
+                }
+            }
+            catch { /* ignore unreadable files */ }
+        }
+        return results;
+    }
+
+    static string ToRelative(string path)
+    {
+        var rel = Path.GetRelativePath(_rootDir, path);
+        return rel.Replace(Path.DirectorySeparatorChar, '/');
     }
 }
