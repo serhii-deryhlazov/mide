@@ -16,7 +16,7 @@ partial class Program
             SetEditorMode(mode, focus);
             UpdateTitle();
             UpdateStatusBar();
-            Notify("Opened", Path.GetFileName(path), NotificationSeverity.Success);
+            //Notify("Opened", Path.GetFileName(path), NotificationSeverity.Success);
 
             if (!fromTree)
                 SyncTreeSelection(path);
@@ -43,7 +43,7 @@ partial class Program
             _rootDir = dir;
             if (_fileTree != null) PopulateTree(_fileTree, _rootDir);
             _ws.StatusBarStateService.TopStatus = $" mide – {Path.GetFileName(dir)}/ ";
-            Notify("Folder", Path.GetFileName(dir), NotificationSeverity.Info);
+            //Notify("Folder", Path.GetFileName(dir), NotificationSeverity.Info);
         }
     }
 
@@ -51,7 +51,7 @@ partial class Program
     {
         if (_editor == null) return;
         _editor.Content           = string.Empty;
-    _editor.SyntaxHighlighter = new IdeSyntaxHighlighter(settings: _config.Editor);
+        _editor.SyntaxHighlighter = new IdeSyntaxHighlighter(settings: _config.Editor);
         _currentFile              = null;
         SetEditorMode(EditorMode.Edit, focus: true);
         UpdateTitle();
@@ -74,7 +74,7 @@ partial class Program
                 File.WriteAllText(path, _editor.Content ?? string.Empty);
                 _currentFile = path;
                 UpdateTitle();
-                Notify("Saved", Path.GetFileName(path), NotificationSeverity.Success);
+                //Notify("Saved", Path.GetFileName(path), NotificationSeverity.Success);
                 OpenFile(path, mode: EditorMode.Browse, focus: false);
             }
             catch (Exception ex)
@@ -98,7 +98,7 @@ partial class Program
             }
         }
 
-        _editor.Content  = Welcome;
+        _editor.Content  = Constants.WelcomeContent.Text;
         _currentFile     = null;
         UpdateTitle();
     }

@@ -1,8 +1,8 @@
-namespace mide;
+namespace mide.Constants;
 
-partial class Program
+internal static class WelcomeContent
 {
-    const string Welcome =
+    public const string Text =
         "//  ███╗   ███╗██╗██████╗ ███████╗\n" +
         "//  ████╗ ████║██║██╔══██╗██╔════╝\n" +
         "//  ██╔████╔██║██║██║  ██║█████╗\n" +

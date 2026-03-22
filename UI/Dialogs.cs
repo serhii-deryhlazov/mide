@@ -1,8 +1,6 @@
-using SharpConsoleUI;
 using SharpConsoleUI.Builders;
 using SharpConsoleUI.Controls;
 using SharpConsoleUI.Core;
-using SharpConsoleUI.Dialogs;
 
 namespace mide;
 
@@ -46,7 +44,7 @@ partial class Program
         {
             int line = content[..idx].Count(c => c == '\n') + 1;
             _editor.GoToLine(line);
-            Notify("Found", $"'{term}' at line {line}", NotificationSeverity.Info);
+            //Notify("Found", $"'{term}' at line {line}", NotificationSeverity.Info);
         }
         else
         {

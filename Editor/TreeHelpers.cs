@@ -63,7 +63,7 @@ partial class Program
         catch { /* permission denied */ }
     }
 
-    static void SyncTreeSelection(string path)
+    static void SyncTreeSelection(string path, bool expand = true)
     {
         if (_fileTree == null) return;
 
@@ -77,36 +77,7 @@ partial class Program
         _suppressTreeEvent = false;
     }
 
-    // Like SyncTreeSelection but skips EnsureNodeVisible so ancestors aren't expanded.
-    static void SyncTreeSelectionNoExpand(string path)
-    {
-        if (_fileTree == null) return;
-
-        var normalized = Path.GetFullPath(path);
-        var node = _fileTree.FindNodeByTag(normalized);
-        if (node == null) return;
-
-        _suppressTreeEvent = true;
-        _fileTree.SelectNode(node);
-        _suppressTreeEvent = false;
-    }
-
-    static string FileIcon(string name) => Path.GetExtension(name).ToLower() switch
-    {
-        ".cs"               => "[green]C#[/]",
-        ".py"               => "[yellow]PY[/]",
-        ".js"               => "[yellow]JS[/]",
-        ".ts" or ".tsx"     => "[blue]TS[/]",
-        ".json"             => "[orange3]{}[/]",
-        ".md"               => "[white]MD[/]",
-        ".txt"              => "[grey]TX[/]",
-        ".xml"              => "[orange1]XM[/]",
-        ".html" or ".htm"   => "[magenta]HT[/]",
-        ".css"              => "[cyan]CS[/]",
-        ".sh"               => "[green]SH[/]",
-        ".csproj" or ".sln" => "[blue]PR[/]",
-        _                   => "[grey]  [/]"
-    };
+    static string FileIcon(string name) => Constants.FileIcons.ForFile(name);
 
     static void ToggleTree()
     {
@@ -166,7 +137,7 @@ partial class Program
 
                     var pathToSelect = selectedPath ?? _currentFile;
                     if (pathToSelect != null)
-                        SyncTreeSelectionNoExpand(pathToSelect);
+                        SyncTreeSelection(pathToSelect, false);
                     _suppressTreeEvent = false;
                 }
             }
