@@ -341,6 +341,28 @@ partial class Program
             return;
         }
 
+        if (lower.StartsWith("f ") || lower.StartsWith("find "))
+        {
+            if (_editor?.IsEditing != true)
+            {
+                return;
+            }
+
+            var subj = cmd[(cmd.IndexOf(' ') + 1)..].Trim();
+
+            if (_editor.Content.IndexOf(subj) is int idx && idx >= 0)
+            {
+                int line = CountLines(_editor.Content[..idx]);
+                _editor.GoToLine(line);
+                _editor.SetFocus(true, FocusReason.Programmatic);
+            }
+            else
+            {
+                Notify("Find", $"Not found: {subj}", NotificationSeverity.Info);
+            }
+            return;
+        }
+
         // :line  |  :line:col  |  :line:e
         if (cmd.StartsWith(':'))
         {
