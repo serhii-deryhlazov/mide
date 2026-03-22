@@ -7,12 +7,16 @@ partial class Program
     static void PopulateTree(TreeControl tree, string dir)
     {
         tree.Clear();
-        // Add the workspace children as top-level nodes (no wrapper root)
+
+        string folderColor = _config.Tree.FolderColor; 
+
         foreach (var d in Directory.GetDirectories(dir).OrderBy(x => x))
         {
             var name = Path.GetFileName(d);
             if (name.StartsWith('.') || _config.Tree.IgnoredDirs.Contains(name)) continue;
-            var node = tree.AddRootNode($"[cyan]{EscapeMarkup(name)}/[/]");
+            
+            // Wrap the name in the color tag
+            var node = tree.AddRootNode($"[{folderColor}]{EscapeMarkup(name)}/[/]");
             node.Tag = d;
             AddChildren(node, d, 1);
         }

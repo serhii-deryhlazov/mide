@@ -20,6 +20,7 @@ public sealed class EditorSettings
     [JsonPropertyName("backgroundColor")] public string BackgroundColor { get; init; } = "#001a33";
     [JsonPropertyName("foregroundColor")] public string ForegroundColor { get; init; } = "#fffdf5";
     [JsonPropertyName("browseBackgroundColor")] public string BrowseBackgroundColor { get; init; } = "#001a33";
+    [JsonPropertyName("lineNumberColor")] public string LineNumberColor { get; init; } = "#008b8b";
     [JsonPropertyName("currentLineHighlightColor")] public string CurrentLineHighlightColor { get; init; } = "#008b8b";
 
     // Syntax colors
@@ -38,10 +39,12 @@ public sealed class EditorSettings
 
 sealed class TreeSettings
 {
+    [JsonPropertyName("highlightBackgroundColor")] public string HighlightBackgroundColor { get; init; } = "#000080";
     [JsonPropertyName("visibleOnStart")] public bool VisibleOnStart { get; init; } = false;
+    [JsonPropertyName("folderColor")] public string FolderColor { get; init; } = "#ffd700";
     [JsonPropertyName("width")] public int Width { get; init; } = 30;
     [JsonPropertyName("maxDepth")] public int MaxDepth { get; init; } = 3;
-    [JsonPropertyName("ignoredDirs")] public string[] IgnoredDirs { get; init; } = ["bin", "obj", "node_modules", "__pycache__"];
+    [JsonPropertyName("ignoredDirs")] public string[] IgnoredDirs { get; init; } = ["bin", ".git", "obj", "node_modules", "__pycache__"];
     [JsonPropertyName("refreshIntervalSeconds")] public int RefreshIntervalSeconds { get; init; } = 5;
 }
 

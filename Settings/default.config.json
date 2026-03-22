@@ -9,29 +9,32 @@
     "autoIndent": true,
     "startInEditMode": false,
 
-    "backgroundColor": "#071235",
-    "foregroundColor": "#ffffff",
-    "browseBackgroundColor": "#071028",
-    "currentLineHighlightColor": "#122244",
+    "backgroundColor": "#6b896f",
+    "foregroundColor": "#fefefe",
+    "browseBackgroundColor": "#6b896f",
+    "currentLineHighlightColor": "#7c9e81",
+    "lineNumberColor": "#fef4e2",
 
-    "syntaxKeywordColor": "#ff6ae0",
-    "syntaxTypeColor": "#2af5ff",
-    "syntaxStringColor": "#ffb020",
-    "syntaxCommentColor": "#8ef08e",
-    "syntaxNumberColor": "#00ffd5",
-    "syntaxPunctuationColor": "#ff88ff",
-    "syntaxIdentifierColor": "#ffffff",
-    "syntaxJsonKeyColor": "#7efc00",
-    "syntaxMarkdownHeadColor": "#ff7a18",
-    "syntaxMarkdownBoldColor": "#ffffff",
-    "syntaxPythonDecorColor": "#ff2d95"
+    "syntaxKeywordColor": "#ffe5fa",
+    "syntaxTypeColor": "#c6fafd",
+    "syntaxStringColor": "#feefd3",
+    "syntaxCommentColor": "#c8ffc8",
+    "syntaxNumberColor": "#bbfff4",
+    "syntaxPunctuationColor": "#e9ffe1",
+    "syntaxIdentifierColor": "#fefefe",
+    "syntaxJsonKeyColor": "#e4f3d6",
+    "syntaxMarkdownHeadColor": "#fcd0b1",
+    "syntaxMarkdownBoldColor": "#fefefe",
+    "syntaxPythonDecorColor": "#fddcec"
   },
   "tree": {
+    "highlightBackgroundColor": "#7c9e81",
+    "folderColor": "#ffd700",
     "visibleOnStart": false,
     "width": 30,
     "maxDepth": 3,
     "refreshIntervalSeconds": 5,
-    "ignoredDirs": [ "bin", "obj", "node_modules", "__pycache__" ]
+    "ignoredDirs": [ "bin", "obj", "node_modules", "__pycache__", ".git" ]
   },
   "layout": {
     "padding": 2,

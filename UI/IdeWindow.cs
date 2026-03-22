@@ -4,6 +4,7 @@ using SharpConsoleUI.Builders;
 using SharpConsoleUI.Controls;
 using SharpConsoleUI.Core;
 using Spectre.Console;
+using SharpConsoleUI.Themes;
 
 namespace mide;
 
@@ -26,6 +27,8 @@ partial class Program
         _editor.CursorPositionChanged += (_, _) => UpdateStatusBar();
         _editor.OverwriteModeChanged += (_, _) => UpdateStatusBar();
         _editor.EditingModeChanged += (_, _) => UpdateStatusBar();
+
+        _editor.LineNumberColor = ParseColor(_config.Editor.LineNumberColor, Color.FromHex("#c8ffc8"));
 
         _editorBrowseBg  = ParseColor(_config.Editor.BrowseBackgroundColor, Color.FromHex("#001a33"));
         _editor.CurrentLineHighlightColor = ParseColor(_config.Editor.CurrentLineHighlightColor, Color.FromHex("#008b8b"));
@@ -75,6 +78,8 @@ partial class Program
             if (e.Node?.Tag is string path && File.Exists(path))
                 OpenFile(path, fromTree: true, focus: false);
         };
+
+        _fileTree.HighlightBackgroundColor = ParseColor(_config.Tree.HighlightBackgroundColor, Color.Navy);
 
         var layout = Controls.HorizontalGrid()
             .WithVerticalAlignment(SharpConsoleUI.Layout.VerticalAlignment.Fill)

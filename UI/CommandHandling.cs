@@ -107,6 +107,55 @@ partial class Program
         int posX = Math.Max(0, (_ws.DesktopDimensions.Width - width) / 2);
         int posY = Math.Max(0, _ws.DesktopDimensions.Height - height - 1);
 
+        Window? suggestionWindow = null;
+
+        void CloseSuggestions()
+        {
+            if (_ws != null && suggestionWindow != null)
+            {
+                _ws.CloseWindow(suggestionWindow);
+            }
+            suggestionWindow = null;
+        }
+
+        void ShowSuggestions(string input, (int posX, int posY) commandLinePosition, int commandLineWidth, PromptControl prompt)
+        {
+            if (_ws == null) return;
+            if (string.IsNullOrEmpty(input))
+            {
+                CloseSuggestions();
+                return;
+            }
+
+            var lines = input.Split('\n');
+            int suggHeight = Math.Max(3, lines.Length + 1);
+
+            CloseSuggestions();
+
+            int suggX = commandLinePosition.posX;
+            int suggY = Math.Max(0, commandLinePosition.posY - suggHeight - 1);
+
+            suggestionWindow = new WindowBuilder(_ws)
+                .WithTitle(string.Empty)
+                .WithSize(commandLineWidth, suggHeight)
+                .AtPosition(suggX, suggY)
+                .Borderless()
+                .HideTitle()
+                .HideTitleButtons()
+                .Build();
+
+            suggestionWindow.AddControl(Controls.Label(input));
+            suggestionWindow.PreviewKeyPressed += (_, e) =>
+            {
+                e.Handled = true;
+                prompt.SetFocus(true, FocusReason.Programmatic);
+            };
+            
+            _ws.AddWindow(suggestionWindow);
+
+            prompt.SetFocus(true, FocusReason.Programmatic);
+        }
+
         var pathIndex = BuildPathIndex();
         var fileIndex = pathIndex
             .Where(p => !p.EndsWith("/"))
@@ -141,6 +190,7 @@ partial class Program
         };
         prompt.Entered += async (_, text) =>
         {
+            CloseSuggestions();
             await ExecuteCommand(text, pathIndex);
             _ws.CloseWindow(dialog);
         };
@@ -154,10 +204,8 @@ partial class Program
             if (e.KeyInfo.Key == ConsoleKey.Backspace && current.Length > 0)
                 current = current[..^1];
 
-            if (current.Length > 3)
-                ShowSuggestions(
-                    BuildSuggestions(current, pathIndex, fileIndex), 
-                    (posX, posY), width, prompt);
+            if (e.KeyInfo.Key != ConsoleKey.Enter && current.Length > 3)
+                ShowSuggestions(BuildSuggestions(current, pathIndex, fileIndex), (posX, posY), width, prompt);
         };
 
         dialog.OnClosed += (_, _) => CloseSuggestions();
@@ -172,25 +220,6 @@ partial class Program
         if (string.IsNullOrEmpty(cmd)) return;
 
         var lower = cmd.ToLowerInvariant();
-
-        if (lower is "tree" or "t")
-        {
-            ToggleTree();
-            //Notify("Tree", _treeVisible ? "Shown" : "Hidden", NotificationSeverity.Info);
-            return;
-        }
-
-        if (lower is "edit" or "e")
-        {
-            await OpenFileDialogAsync(EditorMode.Edit);
-            return;
-        }
-
-        if (lower is "open" or "o")
-        {
-            await OpenFileDialogAsync(EditorMode.Browse);
-            return;
-        }
 
         if (lower.StartsWith("open ") || lower.StartsWith("o "))
         {
@@ -214,15 +243,27 @@ partial class Program
 
             if (string.IsNullOrEmpty(match)) return;
 
-            CloseSuggestions();
+            //Notify("Command", $"Did you mean: {match} ?", NotificationSeverity.Info);
+
+            OpenFile(Path.Combine(_rootDir, match.TrimStart('/').Replace('/', Path.DirectorySeparatorChar)), mode: EditorMode.Browse, focus: true);
+
+            return;
+        }
+
+        if (lower.StartsWith(">"))
+        {
+            var pathPart = cmd[1..];
+
+            string? match =pathIndex.Where(p => p.Contains(pathPart, StringComparison.OrdinalIgnoreCase))
+                .Take(5).Select(p => "/" + p.Replace(Path.DirectorySeparatorChar, '/')).FirstOrDefault();
+
+            if (string.IsNullOrEmpty(match)) return;
 
             //Notify("Command", $"Did you mean: {match} ?", NotificationSeverity.Info);
 
+            OpenFile(Path.Combine(_rootDir, match.TrimStart('/').Replace('/', Path.DirectorySeparatorChar)), mode: EditorMode.Browse, focus: true);
+
             return;
-            // if (match[(match.Length-5)..].Contains('.'))
-            //     await OpenFolderDialogAsync();
-            // else
-            //     await OpenFileDialogAsync(EditorMode.Browse);
         }
 
         if (lower.StartsWith("edit ") || lower.StartsWith("e "))
@@ -386,18 +427,21 @@ partial class Program
     static List<string> BuildPathIndex()
     {
         var list = new List<string>();
+
         if (!Directory.Exists(_rootDir)) return list;
+
+        var forbidden = new HashSet<string>(_config.Tree.IgnoredDirs, StringComparer.Ordinal);
 
         foreach (var dir in Directory.EnumerateDirectories(_rootDir, "*", SearchOption.AllDirectories))
         {
             var rel = ToRelative(dir).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-            if (!string.IsNullOrEmpty(rel)) list.Add(rel + "/");
+            if (!string.IsNullOrEmpty(rel) && !forbidden.Contains(dir)) list.Add(rel + "/");
         }
 
         foreach (var file in Directory.EnumerateFiles(_rootDir, "*", SearchOption.AllDirectories))
         {
             var rel = ToRelative(file);
-            if (!string.IsNullOrEmpty(rel)) list.Add(rel);
+            if (!string.IsNullOrEmpty(rel) && forbidden.All(d => !Path.GetDirectoryName(file)!.Contains(d))) list.Add(rel);
         }
 
         return list;
@@ -415,10 +459,11 @@ partial class Program
                 foreach (var line in File.ReadLines(file))
                 {
                     lineNo++;
-                    if (line.IndexOf(term, StringComparison.OrdinalIgnoreCase) >= 0)
+                    int index = line.IndexOf(term, StringComparison.OrdinalIgnoreCase);
+                    if (index >= 0)
                     {
                         var rel = ToRelative(file);
-                        results.Add($"{rel}:{lineNo}");
+                        results.Add($"{rel}:{lineNo} ..{line.Trim()[(index-30)..(index+30)]}..");
                         break;
                     }
                 }

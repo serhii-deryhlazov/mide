@@ -1,0 +1,32 @@
+   .type {
+       background-color: #6b896f;
+       color: #fefefe;
+   }
+   
+   .browse-background {
+       background-color: #8eb594;
+   }
+   
+   .current-line-highlight {
+       background-color: #7c9e81;
+   }
+
+    .line-number {
+        color: #fef4e2;
+    }
+
+    .highlight-background {
+        background-color: #7c9e81;
+    }
+   
+   .syntax-keyword { color: #ffe5fa; }
+   .syntax-type { color: #c6fafd; }
+   .syntax-string { color: #feefd3; }
+   .syntax-comment { color: #c8ffc8; }
+   .syntax-number { color: #bbfff4; }
+   .syntax-punctuation { color: #e9ffe1; }
+   .syntax-identifier { color: #fefefe; }
+   .syntax-json-key { color: #e4f3d6; }
+   .syntax-markdown-head { color: #fcd0b1; }
+   .syntax-markdown-bold { color: #fefefe; }
+   .syntax-python-decor { color: #fddcec; }
