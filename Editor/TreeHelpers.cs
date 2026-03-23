@@ -15,7 +15,6 @@ partial class Program
             var name = Path.GetFileName(d);
             if (name.StartsWith('.') || _config.Tree.IgnoredDirs.Contains(name)) continue;
             
-            // Wrap the name in the color tag
             var node = tree.AddRootNode($"[{folderColor}]{EscapeMarkup(name)}/[/]");
             node.Tag = d;
             AddChildren(node, d, 1);
@@ -29,7 +28,6 @@ partial class Program
         }
     }
 
-    // Re-expand nodes whose tag paths were expanded before the refresh.
     static void RestoreExpandedPaths(TreeControl tree, HashSet<string> expanded)
     {
         void Walk(IEnumerable<TreeNode> nodes)

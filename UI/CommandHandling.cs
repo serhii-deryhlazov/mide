@@ -52,7 +52,7 @@ partial class Program
         }
 
         // Delete file/folder with 'd' (when tree is visible)
-        if (_treeVisible && e.KeyInfo.KeyChar == 'd')
+        if (_treeVisible && e.KeyInfo.KeyChar == 'd' && e.KeyInfo.Modifiers == ConsoleModifiers.Control)
         {
             e.Handled = true;
             _ = DeleteSelectedTreeNodeAsync();

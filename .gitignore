@@ -2,3 +2,4 @@
 /obj
 /publish
 *.tar.gz
+artifacts
