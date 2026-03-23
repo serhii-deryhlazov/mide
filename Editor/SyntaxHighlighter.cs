@@ -1,7 +1,7 @@
 using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
-using Spectre.Console;
+using SharpConsoleUI;
 using SharpConsoleUI.Controls;
 using mide.Constants;
 
@@ -42,7 +42,7 @@ public class IdeSyntaxHighlighter : ISyntaxHighlighter
         _jsonKeyColor      = ParseColor(s.SyntaxJsonKeyColor, Color.Gold1);
         _markdownHeadColor = ParseColor(s.SyntaxMarkdownHeadColor, Color.Yellow);
         _markdownBoldColor = ParseColor(s.SyntaxMarkdownBoldColor, Color.White);
-        _pythonDecorColor  = ParseColor(s.SyntaxPythonDecorColor, Color.Plum2);
+        _pythonDecorColor  = ParseColor(s.SyntaxPythonDecorColor, Color.Plum1);
     }
 
     public static IdeSyntaxHighlighter ForExtension(string ext, EditorSettings? settings = null) => ext.ToLower() switch
@@ -233,7 +233,7 @@ public class IdeSyntaxHighlighter : ISyntaxHighlighter
         if (prop?.GetValue(null) is Color named) return named;
         if (value.StartsWith('#'))
         {
-            try { return Color.FromHex(value); } catch { return fallback; }
+            if (Color.TryFromHex(value, out var hex)) return hex;
         }
         return fallback;
     }

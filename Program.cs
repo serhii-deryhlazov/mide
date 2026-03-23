@@ -1,4 +1,3 @@
-using Spectre.Console;
 using SharpConsoleUI;
 using SharpConsoleUI.Configuration;
 using SharpConsoleUI.Controls;

@@ -3,7 +3,6 @@ using SharpConsoleUI;
 using SharpConsoleUI.Builders;
 using SharpConsoleUI.Controls;
 using SharpConsoleUI.Core;
-using Spectre.Console;
 using SharpConsoleUI.Themes;
 
 namespace mide;
@@ -28,10 +27,10 @@ partial class Program
         _editor.OverwriteModeChanged += (_, _) => UpdateStatusBar();
         _editor.EditingModeChanged += (_, _) => UpdateStatusBar();
 
-        _editor.LineNumberColor = ParseColor(_config.Editor.LineNumberColor, Color.FromHex("#c8ffc8"));
+        _editor.LineNumberColor = ParseColor(_config.Editor.LineNumberColor, new Color(200, 255, 200));
 
-        _editorBrowseBg  = ParseColor(_config.Editor.BrowseBackgroundColor, Color.FromHex("#001a33"));
-        _editor.CurrentLineHighlightColor = ParseColor(_config.Editor.CurrentLineHighlightColor, Color.FromHex("#008b8b"));
+        _editorBrowseBg  = ParseColor(_config.Editor.BrowseBackgroundColor, new Color(0, 26, 51));
+        _editor.CurrentLineHighlightColor = ParseColor(_config.Editor.CurrentLineHighlightColor, new Color(0, 139, 139));
 
         _fileTree = new TreeControl { Name = "fileTree" };
         PopulateTree(_fileTree, _rootDir);
@@ -95,8 +94,8 @@ partial class Program
             .HideTitle()
             .HideTitleButtons()
             .Borderless()
-            .WithBackgroundColor(ParseColor(_config.Editor.BackgroundColor, Color.FromHex("#001a33")))
-            .WithForegroundColor(ParseColor(_config.Editor.ForegroundColor, Color.FromHex("#fffdf5")))
+            .WithBackgroundColor(ParseColor(_config.Editor.BackgroundColor, new Color(0, 26, 51)))
+            .WithForegroundColor(ParseColor(_config.Editor.ForegroundColor, new Color(255, 253, 245)))
             .AddControl(layout)
             .BuildAndShow();
 
@@ -162,8 +161,7 @@ partial class Program
         // hex (#RRGGBB) support
         if (value.StartsWith('#'))
         {
-            try { return Color.FromHex(value); }
-            catch { return fallback; }
+            if (Color.TryFromHex(value, out var hex)) return hex;
         }
 
         return fallback;
