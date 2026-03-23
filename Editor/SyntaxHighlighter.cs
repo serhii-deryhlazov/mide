@@ -42,7 +42,7 @@ public class IdeSyntaxHighlighter : ISyntaxHighlighter
         _jsonKeyColor      = ParseColor(s.SyntaxJsonKeyColor, Color.Gold1);
         _markdownHeadColor = ParseColor(s.SyntaxMarkdownHeadColor, Color.Yellow);
         _markdownBoldColor = ParseColor(s.SyntaxMarkdownBoldColor, Color.White);
-        _pythonDecorColor  = ParseColor(s.SyntaxPythonDecorColor, Color.Plum1);
+        _pythonDecorColor  = ParseColor(s.SyntaxPythonDecorColor, new Color(215, 175, 215)); // Spectre Plum2
     }
 
     public static IdeSyntaxHighlighter ForExtension(string ext, EditorSettings? settings = null) => ext.ToLower() switch

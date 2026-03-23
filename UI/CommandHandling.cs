@@ -9,10 +9,56 @@ partial class Program
 {
     static void OnWindowPreviewKeyPressed(object? sender, KeyPressedEventArgs e)
     {
+        // Backtick toggles command bar
         if (IsBacktick(e.KeyInfo))
         {
             e.Handled = true;
-            ShowCommandPrompt();
+            if (_commandBarVisible) HideCommandBar();
+            else ShowCommandBar();
+            return;
+        }
+
+        // When command bar is active, handle Escape + portal navigation
+        if (_commandBarVisible)
+        {
+            if (e.KeyInfo.Key == ConsoleKey.Escape)
+            {
+                e.Handled = true;
+                if (_suggestionPortal?.IsFocused == true)
+                    _suggestionPortal.SetFocused(false);  // Esc in portal → back to prompt
+                else
+                    HideCommandBar();                     // Esc in prompt → close bar
+                return;
+            }
+            if (_suggestionPortal != null)
+            {
+                if (e.KeyInfo.Key == ConsoleKey.DownArrow)
+                {
+                    e.Handled = true;
+                    _suggestionPortal.SelectNext();
+                    return;
+                }
+                if (e.KeyInfo.Key == ConsoleKey.UpArrow)
+                {
+                    e.Handled = true;
+                    if (!_suggestionPortal.SelectPrev())
+                    {
+                        // Was at top — focus returned to prompt by SelectPrev
+                        _mainWindow?.FocusControl(_commandBar!);
+                    }
+                    return;
+                }
+                if (_suggestionPortal.IsFocused &&
+                    (e.KeyInfo.Key == ConsoleKey.Enter || e.KeyInfo.Key == ConsoleKey.Tab))
+                {
+                    e.Handled = true;
+                    var sel = _suggestionPortal.GetSelected();
+                    if (sel != null && _commandBar != null)
+                        _commandBar.Input = sel;
+                    return;
+                }
+            }
+            // Do NOT route keys to editor/tree when command bar is visible
             return;
         }
 
@@ -51,7 +97,7 @@ partial class Program
             return;
         }
 
-        // Delete file/folder with 'd' (when tree is visible)
+        // Delete file/folder with Ctrl+D (when tree is visible)
         if (_treeVisible && e.KeyInfo.KeyChar == 'd' && e.KeyInfo.Modifiers == ConsoleModifiers.Control)
         {
             e.Handled = true;
@@ -98,63 +144,54 @@ partial class Program
         return false;
     }
 
-    static void ShowCommandPrompt()
+    // ── Command bar ──────────────────────────────────────────────────────────
+
+    private static readonly List<(string Display, string Completion)> _allCommands = new()
     {
-        if (_ws == null) return;
-        int width = Math.Max(_config.Layout.MinCommandWidth, _ws.DesktopDimensions.Width - 2);
-        int height = _config.Dialogs.CommandHeight;
+        ("open <path>   open file (browse)",  "open "),
+        ("edit <path>   open file (edit)",    "edit "),
+        ("new  <name>   create new file",     "new "),
+        ("save          save current file",   "save"),
+        ("tree          toggle file tree",    "tree"),
+        (":line         go to line",          ":"),
+        ("/path         find file by path",   "/"),
+        (">term         search in files",     ">"),
+    };
 
-        int posX = Math.Max(0, (_ws.DesktopDimensions.Width - width) / 2);
-        int posY = Math.Max(0, _ws.DesktopDimensions.Height - height - 1);
+    static void ShowCommandBar()
+    {
+        if (_commandBar == null || _mainWindow == null) return;
+        _commandBarVisible  = true;
+        _commandBar.Input   = string.Empty;
+        _commandBar.Visible = true;
+        if (_statusBar != null) _statusBar.Visible = false;
+        _mainWindow.FocusControl(_commandBar);
+        ShowSuggestionPortal(string.Empty);
+    }
 
-        Window? suggestionWindow = null;
+    static void HideCommandBar()
+    {
+        DismissSuggestionPortal();
+        _commandBarVisible = false;
+        if (_commandBar != null) _commandBar.Visible = false;
+        if (_statusBar != null) _statusBar.Visible = true;
+        if (!_treeVisible && _editor != null)
+            _editor.SetFocus(true, FocusReason.Programmatic);
+        else if (_treeVisible && _fileTree != null)
+            _fileTree.SetFocus(true, FocusReason.Programmatic);
+    }
 
-        void CloseSuggestions()
-        {
-            if (_ws != null && suggestionWindow != null)
-            {
-                _ws.CloseWindow(suggestionWindow);
-            }
-            suggestionWindow = null;
-        }
+    static void DismissSuggestionPortal()
+    {
+        if (_suggestionPortalNode != null && _mainWindow != null && _commandBar != null)
+            _mainWindow.RemovePortal(_commandBar, _suggestionPortalNode);
+        _suggestionPortalNode = null;
+        _suggestionPortal     = null;
+    }
 
-        void ShowSuggestions(string input, (int posX, int posY) commandLinePosition, int commandLineWidth, PromptControl prompt)
-        {
-            if (_ws == null) return;
-            if (string.IsNullOrEmpty(input))
-            {
-                CloseSuggestions();
-                return;
-            }
-
-            var lines = input.Split('\n');
-            int suggHeight = Math.Max(3, lines.Length + 1);
-
-            CloseSuggestions();
-
-            int suggX = commandLinePosition.posX;
-            int suggY = Math.Max(0, commandLinePosition.posY - suggHeight - 1);
-
-            suggestionWindow = new WindowBuilder(_ws)
-                .WithTitle(string.Empty)
-                .WithSize(commandLineWidth, suggHeight)
-                .AtPosition(suggX, suggY)
-                .Borderless()
-                .HideTitle()
-                .HideTitleButtons()
-                .Build();
-
-            suggestionWindow.AddControl(Controls.Label(input));
-            suggestionWindow.PreviewKeyPressed += (_, e) =>
-            {
-                e.Handled = true;
-                prompt.SetFocus(true, FocusReason.Programmatic);
-            };
-            
-            _ws.AddWindow(suggestionWindow);
-
-            prompt.SetFocus(true, FocusReason.Programmatic);
-        }
+    static void ShowSuggestionPortal(string input)
+    {
+        if (_commandBar == null || _mainWindow == null || _ws == null) return;
 
         var pathIndex = BuildPathIndex();
         var fileIndex = pathIndex
@@ -162,56 +199,97 @@ partial class Program
             .Select(p => Path.Combine(_rootDir, p.Replace('/', Path.DirectorySeparatorChar)))
             .ToList();
 
-        var dialog = new WindowBuilder(_ws)
-            .WithTitle("Command")
-            .WithSize(width, height)
-            .AtPosition(posX, posY)
-            .AsModal()
-            .Borderless()
-            .HideTitle()
-            .HideTitleButtons()
-            .Build();
+        var suggestions = BuildSuggestionList(input, pathIndex, fileIndex);
 
-        dialog.PreviewKeyPressed += (_, e) =>
+        // If portal already exists, just update its items (avoids flicker)
+        if (_suggestionPortal != null)
         {
-            if (IsBacktick(e.KeyInfo))
-            {
-                e.Handled = true;
-                _ws.CloseWindow(dialog);
-            }
+            if (suggestions.Count == 0) { DismissSuggestionPortal(); return; }
+            _suggestionPortal.UpdateItems(suggestions);
+            _mainWindow.FocusControl(_commandBar);
+            return;
+        }
+
+        if (suggestions.Count == 0) return;
+
+        int anchorX = _commandBar.ActualX;
+        int anchorY = (_commandBar.ActualY > 0
+            ? _commandBar.ActualY
+            : _ws.DesktopDimensions.Height - 1) - 2;
+
+        _suggestionPortal = new CommandSuggestionPortal(
+            suggestions, anchorX, anchorY,
+            _ws.DesktopDimensions.Width, _ws.DesktopDimensions.Height);
+
+        _suggestionPortal.ItemAccepted += (_, item) =>
+        {
+            if (_commandBar != null) _commandBar.Input = item;
+            // InputChanged will re-filter portal automatically
         };
 
-        var prompt = new PromptControl
-        {
-            Prompt = string.Empty,
-            UnfocusOnEnter = true,
-            Input = string.Empty,
-            InputWidth = width - 2
-        };
-        prompt.Entered += async (_, text) =>
-        {
-            CloseSuggestions();
-            await ExecuteCommand(text, pathIndex);
-            _ws.CloseWindow(dialog);
-        };
-
-        dialog.AddControl(prompt);
-
-        dialog.KeyPressed += (_, e) =>
-        {
-            var current = prompt.Input ?? string.Empty;
-
-            if (e.KeyInfo.Key == ConsoleKey.Backspace && current.Length > 0)
-                current = current[..^1];
-
-            if (e.KeyInfo.Key != ConsoleKey.Enter && current.Length > 3)
-                ShowSuggestions(BuildSuggestions(current, pathIndex, fileIndex), (posX, posY), width, prompt);
-        };
-
-        dialog.OnClosed += (_, _) => CloseSuggestions();
-
-        _ws.AddWindow(dialog);
+        _suggestionPortalNode = _mainWindow.CreatePortal(_commandBar, _suggestionPortal);
+        _mainWindow.FocusControl(_commandBar);
     }
+
+    static List<(string Display, string Completion)> BuildSuggestionList(
+        string input, List<string> pathIndex, List<string> fileIndex)
+    {
+        // Empty input → show all commands
+        if (string.IsNullOrEmpty(input))
+            return _allCommands.ToList();
+
+        // "open <term>" / "o <term>" / "edit <term>" / "e <term>" → file suggestions
+        var lower = input.ToLowerInvariant();
+        if (lower.StartsWith("open ") || lower.StartsWith("o ")
+         || lower.StartsWith("edit ") || lower.StartsWith("e "))
+        {
+            var term = input[(input.IndexOf(' ') + 1)..];
+            return pathIndex
+                .Where(p => !p.EndsWith("/") && p.Contains(term, StringComparison.OrdinalIgnoreCase))
+                .Take(10)
+                .Select(p =>
+                {
+                    var rel = p.Replace(Path.DirectorySeparatorChar, '/');
+                    return (rel, Path.Combine(_rootDir, p.Replace('/', Path.DirectorySeparatorChar)));
+                })
+                .ToList();
+        }
+
+        if (input.StartsWith('/'))
+        {
+            var term = input[1..];
+            return pathIndex
+                .Where(p => p.Contains(term, StringComparison.OrdinalIgnoreCase))
+                .Take(10)
+                .Select(p =>
+                {
+                    var display = "/" + p.Replace(Path.DirectorySeparatorChar, '/');
+                    return (display, display);
+                })
+                .ToList();
+        }
+
+        if (input.StartsWith('>') && input.Length > 1)
+        {
+            var term = input[1..];
+            return GetContentSuggestions(term, fileIndex, 8)
+                .Select(r =>
+                {
+                    var display = r.Replace(Path.DirectorySeparatorChar, '/');
+                    var filePart = display.Contains(':') ? display[..display.IndexOf(':')] : display;
+                    return (display, filePart);
+                })
+                .ToList();
+        }
+
+        // Command suggestions — filter by typed text
+        return _allCommands
+            .Where(c => c.Completion.StartsWith(input, StringComparison.OrdinalIgnoreCase)
+                     || c.Display.Contains(input, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+    }
+
+    // ── Command execution ────────────────────────────────────────────────────
 
     static async Task ExecuteCommand(string text, List<string> pathIndex)
     {
@@ -220,6 +298,12 @@ partial class Program
         if (string.IsNullOrEmpty(cmd)) return;
 
         var lower = cmd.ToLowerInvariant();
+
+        if (lower is "open" or "o")
+        {
+            await OpenFileDialogAsync(EditorMode.Browse);
+            return;
+        }
 
         if (lower.StartsWith("open ") || lower.StartsWith("o "))
         {
@@ -238,12 +322,10 @@ partial class Program
         {
             var pathPart = cmd[1..];
 
-            string? match =pathIndex.Where(p => p.Contains(pathPart, StringComparison.OrdinalIgnoreCase))
+            string? match = pathIndex.Where(p => p.Contains(pathPart, StringComparison.OrdinalIgnoreCase))
                 .Take(5).Select(p => "/" + p.Replace(Path.DirectorySeparatorChar, '/')).FirstOrDefault();
 
             if (string.IsNullOrEmpty(match)) return;
-
-            //Notify("Command", $"Did you mean: {match} ?", NotificationSeverity.Info);
 
             OpenFile(Path.Combine(_rootDir, match.TrimStart('/').Replace('/', Path.DirectorySeparatorChar)), mode: EditorMode.Browse, focus: true);
 
@@ -252,17 +334,31 @@ partial class Program
 
         if (lower.StartsWith(">"))
         {
-            var pathPart = cmd[1..];
+            var term = cmd[1..].Trim();
+            if (string.IsNullOrEmpty(term)) return;
 
-            string? match =pathIndex.Where(p => p.Contains(pathPart, StringComparison.OrdinalIgnoreCase))
-                .Take(5).Select(p => "/" + p.Replace(Path.DirectorySeparatorChar, '/')).FirstOrDefault();
+            var fileIndex = pathIndex
+                .Where(p => !p.EndsWith("/"))
+                .Select(p => Path.Combine(_rootDir, p.Replace('/', Path.DirectorySeparatorChar)))
+                .ToList();
 
-            if (string.IsNullOrEmpty(match)) return;
+            var hit = GetContentSuggestions(term, fileIndex, 1).FirstOrDefault();
+            if (hit == null) { Notify("Find", $"Not found: {term}", NotificationSeverity.Info); return; }
 
-            //Notify("Command", $"Did you mean: {match} ?", NotificationSeverity.Info);
+            // hit format: "rel/path:lineNo ..."
+            var colon = hit.IndexOf(':');
+            var relPath = colon > 0 ? hit[..colon] : hit;
+            int lineNo = 1;
+            if (colon > 0 && int.TryParse(hit[(colon + 1)..].Split(' ')[0], out int ln)) lineNo = ln;
 
-            OpenFile(Path.Combine(_rootDir, match.TrimStart('/').Replace('/', Path.DirectorySeparatorChar)), mode: EditorMode.Browse, focus: true);
+            OpenFile(Path.Combine(_rootDir, relPath.Replace('/', Path.DirectorySeparatorChar)), mode: EditorMode.Browse, focus: true);
+            _editor?.GoToLine(lineNo);
+            return;
+        }
 
+        if (lower is "edit" or "e")
+        {
+            await OpenFileDialogAsync(EditorMode.Edit);
             return;
         }
 
@@ -277,11 +373,17 @@ partial class Program
             return;
         }
 
+        if (lower is "tree" or "t" or "toggle")
+        {
+            ToggleTree();
+            return;
+        }
+
         if (lower is "save" or "s")
         {
             if (_editor?.IsEditing != true)
             {
-                //Notify("Save", "Not in edit mode", NotificationSeverity.Warning);
+                Notify("Save", "Switch to edit mode first (press Enter)", NotificationSeverity.Warning);
                 return;
             }
             await SaveAsync(false);
@@ -320,7 +422,6 @@ partial class Program
                 if (treatAsDir)
                 {
                     Directory.CreateDirectory(normalized);
-                    //Notify("New", $"Folder: {normalized}", NotificationSeverity.Success);
                     RefreshTree(normalized);
                 }
                 else
@@ -328,7 +429,6 @@ partial class Program
                     var parent = Path.GetDirectoryName(normalized);
                     if (!string.IsNullOrEmpty(parent)) Directory.CreateDirectory(parent);
                     File.WriteAllText(normalized, string.Empty);
-                    //Notify("New", Path.GetFileName(normalized), NotificationSeverity.Success);
                     RefreshTree(normalized);
                     OpenFile(normalized, mode: EditorMode.Edit, focus: true);
                 }
@@ -344,9 +444,7 @@ partial class Program
         if (lower.StartsWith("f ") || lower.StartsWith("find "))
         {
             if (_editor?.IsEditing != true)
-            {
                 return;
-            }
 
             var subj = cmd[(cmd.IndexOf(' ') + 1)..].Trim();
 
@@ -366,11 +464,7 @@ partial class Program
         // :line  |  :line:col  |  :line:e
         if (cmd.StartsWith(':'))
         {
-            if (_editor?.IsEditing != true)
-            {
-                //Notify("Go to", "Not in edit mode", NotificationSeverity.Warning);
-                return;
-            }
+            if (_editor == null) return;
             var parts = cmd[1..].Split(':');
             if (int.TryParse(parts[0], out int line) && line >= 1)
             {
@@ -381,20 +475,15 @@ partial class Program
                     var lines = (_editor.Content ?? "").Split('\n');
                     int lineLength = line <= lines.Length ? lines[line - 1].Length : 0;
 
-                    int col; // 0-based for SetLogicalCursorPosition
+                    int col;
                     if (parts[1].Equals("e", StringComparison.OrdinalIgnoreCase))
-                        col = lineLength;                                         // after last char
+                        col = lineLength;
                     else if (int.TryParse(parts[1], out int parsedCol) && parsedCol >= 1)
-                        col = Math.Min(parsedCol - 1, lineLength);               // 1-based → 0-based
+                        col = Math.Min(parsedCol - 1, lineLength);
                     else
                         col = 0;
 
                     _editor.SetLogicalCursorPosition(new System.Drawing.Point(col, line - 1));
-                    //Notify("Go to", $"Ln {line}, Col {col + 1}", NotificationSeverity.Info);
-                }
-                else
-                {
-                    //Notify("Go to", $"Ln {line}", NotificationSeverity.Info);
                 }
             }
             else
@@ -413,37 +502,16 @@ partial class Program
 
         var content = _editor.Content ?? string.Empty;
         var lines   = content.Split('\n').ToList();
-        int lineIdx = _editor.CurrentLine - 1; // CurrentLine is 1-based
+        int lineIdx = _editor.CurrentLine - 1;
 
         if (lineIdx < 0 || lineIdx >= lines.Count) return;
 
         lines.RemoveAt(lineIdx);
 
-        // Keep cursor on the same line index (or the last line if we deleted the last one)
         int targetLine = Math.Min(lineIdx + 1, Math.Max(lines.Count, 1));
 
         _editor.Content = string.Join('\n', lines);
         _editor.GoToLine(targetLine);
-    }
-
-    static string BuildSuggestions(string input, List<string> pathIndex, List<string> fileIndex)
-    {
-        var term = input[1..];
-
-        if (input.StartsWith('/'))
-        {
-            return string.Join('\n', pathIndex
-                .Where(p => p.Contains(term, StringComparison.OrdinalIgnoreCase))
-                .Take(5)
-                .Select(p => "/" + p.Replace(Path.DirectorySeparatorChar, '/')));
-        }
-        else if (input.StartsWith('>'))
-        {
-            return string.Join('\n', GetContentSuggestions(term, fileIndex, 5)
-                .Select(r => "/" + r.Replace(Path.DirectorySeparatorChar, '/')));
-        }
-
-        return string.Empty;
     }
 
     static List<string> BuildPathIndex()
@@ -452,18 +520,24 @@ partial class Program
 
         if (!Directory.Exists(_rootDir)) return list;
 
-        var forbidden = new HashSet<string>(_config.Tree.IgnoredDirs, StringComparer.Ordinal);
+        var forbidden = new HashSet<string>(_config.Tree.IgnoredDirs, StringComparer.OrdinalIgnoreCase);
+
+        bool IsForbidden(string path) =>
+            path.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+                .Any(part => forbidden.Contains(part));
 
         foreach (var dir in Directory.EnumerateDirectories(_rootDir, "*", SearchOption.AllDirectories))
         {
+            if (IsForbidden(Path.GetRelativePath(_rootDir, dir))) continue;
             var rel = ToRelative(dir).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-            if (!string.IsNullOrEmpty(rel) && !forbidden.Contains(dir)) list.Add(rel + "/");
+            if (!string.IsNullOrEmpty(rel)) list.Add(rel + "/");
         }
 
         foreach (var file in Directory.EnumerateFiles(_rootDir, "*", SearchOption.AllDirectories))
         {
+            if (IsForbidden(Path.GetRelativePath(_rootDir, file))) continue;
             var rel = ToRelative(file);
-            if (!string.IsNullOrEmpty(rel) && forbidden.All(d => !Path.GetDirectoryName(file)!.Contains(d))) list.Add(rel);
+            if (!string.IsNullOrEmpty(rel)) list.Add(rel);
         }
 
         return list;
@@ -484,8 +558,10 @@ partial class Program
                     int index = line.IndexOf(term, StringComparison.OrdinalIgnoreCase);
                     if (index >= 0)
                     {
-                        var rel = ToRelative(file);
-                        results.Add($"{rel}:{lineNo} ..{line.Trim()[(index-30)..(index+30)]}..");
+                        var rel   = ToRelative(file);
+                        int start = Math.Max(0, index - 30);
+                        int end   = Math.Min(line.Length, index + 30);
+                        results.Add($"{rel}:{lineNo} ..{line[start..end].Trim()}..");
                         break;
                     }
                 }

@@ -20,6 +20,8 @@ public sealed class EditorSettings
     [JsonPropertyName("backgroundColor")] public string BackgroundColor { get; init; } = "#001a33";
     [JsonPropertyName("foregroundColor")] public string ForegroundColor { get; init; } = "#fffdf5";
     [JsonPropertyName("browseBackgroundColor")] public string BrowseBackgroundColor { get; init; } = "#001a33";
+    [JsonPropertyName("editBackgroundColor")] public string EditBackgroundColor { get; init; } = "#000d1a";
+    [JsonPropertyName("treeBackgroundColor")] public string TreeBackgroundColor { get; init; } = "#00080f";
     [JsonPropertyName("lineNumberColor")] public string LineNumberColor { get; init; } = "#008b8b";
     [JsonPropertyName("currentLineHighlightColor")] public string CurrentLineHighlightColor { get; init; } = "#008b8b";
 
