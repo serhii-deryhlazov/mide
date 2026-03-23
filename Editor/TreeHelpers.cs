@@ -97,7 +97,7 @@ partial class Program
         ApplyTreeVisibility();
         if (_currentFile != null)
             SyncTreeSelection(_currentFile);
-        SetEditorMode(EditorMode.Browse, focus: false);
+        SetEditorMode(EditorMode.Browse, focus: false);  // sets IsEditing=false; UpdateEditorVisuals sees _treeVisible=true → tree bg
         _fileTree?.SetFocus(true, FocusReason.Programmatic);
     }
 

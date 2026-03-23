@@ -3,7 +3,6 @@ using SharpConsoleUI;
 using SharpConsoleUI.Builders;
 using SharpConsoleUI.Controls;
 using SharpConsoleUI.Core;
-using Spectre.Console;
 using SharpConsoleUI.Themes;
 
 namespace mide;
@@ -26,12 +25,16 @@ partial class Program
         _editor.ContentChanged += (_, _) => UpdateStatusBar();
         _editor.CursorPositionChanged += (_, _) => UpdateStatusBar();
         _editor.OverwriteModeChanged += (_, _) => UpdateStatusBar();
-        _editor.EditingModeChanged += (_, _) => UpdateStatusBar();
+        _editor.EditingModeChanged += (_, _) => { UpdateStatusBar(); UpdateTitle(); UpdateEditorVisuals(); };
 
-        _editor.LineNumberColor = ParseColor(_config.Editor.LineNumberColor, Color.FromHex("#c8ffc8"));
+        _editor.LineNumberColor = ParseColor(_config.Editor.LineNumberColor, new Color(200, 255, 200));
 
-        _editorBrowseBg  = ParseColor(_config.Editor.BrowseBackgroundColor, Color.FromHex("#001a33"));
-        _editor.CurrentLineHighlightColor = ParseColor(_config.Editor.CurrentLineHighlightColor, Color.FromHex("#008b8b"));
+        _editorBrowseBg = ParseColor(_config.Editor.BrowseBackgroundColor, new Color(0, 26, 51));
+        _editorEditBg   = ParseColor(_config.Editor.EditBackgroundColor,   new Color(0, 13, 26));
+        _editorTreeBg   = ParseColor(_config.Editor.TreeBackgroundColor,   new Color(0,  8, 15));
+
+        // BackgroundColor and FocusedBackgroundColor are set by SetEditorMode on each transition
+        _editor.CurrentLineHighlightColor = ParseColor(_config.Editor.CurrentLineHighlightColor, new Color(0, 139, 139));
 
         _fileTree = new TreeControl { Name = "fileTree" };
         PopulateTree(_fileTree, _rootDir);
@@ -53,21 +56,23 @@ partial class Program
             if (e.Node?.Tag is string path && File.Exists(path))
             {
                 _suppressTreeEvent = true;
+                try
+                {
+                    _editor!.Content = File.ReadAllText(path);
+                    _currentFile = path;
+                    _editor.SyntaxHighlighter = IdeSyntaxHighlighter.ForExtension(
+                        Path.GetExtension(path), _config.Editor);
 
-                _editor!.Content = File.ReadAllText(path);
-                _currentFile = path;
-                _editor.SyntaxHighlighter = IdeSyntaxHighlighter.ForExtension(
-                    Path.GetExtension(path), _config.Editor);
+                    UpdateTitle();
+                    UpdateStatusBar();
 
-                UpdateTitle();
-                UpdateStatusBar();
+                    _treeVisible = false;
+                    ApplyTreeVisibility();
 
-                _treeVisible = false;
-                ApplyTreeVisibility();
-
-                SetEditorMode(EditorMode.Edit, focus: true);
-                _editor.EnsureCursorVisible();
-                _suppressTreeEvent = false;
+                    SetEditorMode(EditorMode.Edit, focus: true);
+                    _editor.EnsureCursorVisible();
+                }
+                finally { _suppressTreeEvent = false; }
             }
         };
 
@@ -95,10 +100,53 @@ partial class Program
             .HideTitle()
             .HideTitleButtons()
             .Borderless()
-            .WithBackgroundColor(ParseColor(_config.Editor.BackgroundColor, Color.FromHex("#001a33")))
-            .WithForegroundColor(ParseColor(_config.Editor.ForegroundColor, Color.FromHex("#fffdf5")))
+            .WithBackgroundColor(ParseColor(_config.Editor.BackgroundColor, new Color(0, 26, 51)))
+            .WithForegroundColor(ParseColor(_config.Editor.ForegroundColor, new Color(255, 253, 245)))
             .AddControl(layout)
             .BuildAndShow();
+
+        _mainWindow = window;
+
+        _commandBar = new PromptControl
+        {
+            Prompt     = string.Empty,
+            Input      = string.Empty,
+            InputWidth = _ws.DesktopDimensions.Width - 2,
+            StickyPosition = StickyPosition.Bottom,
+            Visible    = false,
+        };
+        _commandBar.Entered += async (_, text) =>
+        {
+            DismissSuggestionPortal();
+            try { await ExecuteCommand(text, BuildPathIndex()); }
+            catch (Exception ex) { Notify("Error", ex.Message, NotificationSeverity.Danger); }
+            HideCommandBar();
+        };
+        _commandBar.InputChanged += (_, input) => ShowSuggestionPortal(input);
+        window.AddControl(_commandBar);
+
+        _statusBar = Controls.StatusBar()
+            .StickyBottom()
+            .Build();
+
+        _sbFile     = _statusBar.AddLeftText("untitled");
+        _statusBar.AddLeftSeparator();
+        _sbPosition = _statusBar.AddLeftText("Ln 1, Col 1");
+        _statusBar.AddLeftSeparator();
+        _sbMode     = _statusBar.AddCenterText("BROWSE",
+            onClick: () => { if (_editor != null) _editor.OverwriteMode = !_editor.OverwriteMode; });
+        _statusBar.AddRightSeparator();
+        _sbChars    = _statusBar.AddRightText("0 chars");
+        _statusBar.AddRightSeparator();
+        _sbWrap     = _statusBar.AddRightText("WordWrap");
+        _statusBar.AddRightSeparator();
+        _sbHint = _statusBar.AddRight("Enter", "Edit",
+            onClick: () =>
+            {
+                if (_editor?.IsEditing == true) SetEditorMode(EditorMode.Browse, focus: true);
+                else                            SetEditorMode(EditorMode.Edit,   focus: true);
+            });
+        window.AddControl(_statusBar);
 
         window.PreviewKeyPressed += OnWindowPreviewKeyPressed;
 
@@ -122,11 +170,12 @@ partial class Program
     static void UpdateStatusBar()
     {
         if (_statusBar == null || _editor == null) return;
+
         var ln    = _editor.CurrentLine;
         var col   = _editor.CurrentColumn;
         var mode  = _editor.IsEditing
-            ? (_editor.OverwriteMode ? "[red]OVR[/]" : "[green]INS[/]")
-            : "[dim]BROWSE[/]";
+            ? (_editor.OverwriteMode ? "OVR" : "INS")
+            : "BROWSE";
         var chars = _editor.Content?.Length ?? 0;
         var wrap  = _editor.WrapMode switch
         {
@@ -134,13 +183,23 @@ partial class Program
             WrapMode.Wrap   => "Wrap",
             _               => "WordWrap"
         };
-        var file = _currentFile != null
-            ? $"[cyan]{EscapeMarkup(Path.GetFileName(_currentFile))}[/]"
-            : "[dim]untitled[/]";
+        var fileName = _currentFile != null
+            ? Path.GetFileName(_currentFile)
+            : "untitled";
 
-        _statusBar.SetContent(new List<string>
+        bool editing = _editor.IsEditing;
+        _statusBar.BatchUpdate(() =>
         {
-            $" {file}   Ln [yellow]{ln}[/], Col [yellow]{col}[/] | {mode} | {chars} chars | {wrap} | [dim]Enter to edit · Esc to browse[/]"
+            if (_sbFile     != null) _sbFile.Label     = fileName;
+            if (_sbPosition != null) _sbPosition.Label = $"Ln {ln}, Col {col}";
+            if (_sbMode     != null) _sbMode.Label     = mode;
+            if (_sbChars    != null) _sbChars.Label    = $"{chars} chars";
+            if (_sbWrap     != null) _sbWrap.Label     = wrap;
+            if (_sbHint != null)
+            {
+                _sbHint.Shortcut = editing ? "Esc"   : "Enter";
+                _sbHint.Label    = editing ? "Browse" : "Edit";
+            }
         });
     }
 
@@ -162,8 +221,7 @@ partial class Program
         // hex (#RRGGBB) support
         if (value.StartsWith('#'))
         {
-            try { return Color.FromHex(value); }
-            catch { return fallback; }
+            if (Color.TryFromHex(value, out var hex)) return hex;
         }
 
         return fallback;
